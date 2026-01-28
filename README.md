@@ -1,1 +1,1 @@
-# sportswear-ecommerce-system
+# sportswear-shop-system
