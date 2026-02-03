@@ -3,14 +3,10 @@ package com.team6.ecommercesystem.dto.request;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.Data;
 
-@Getter
-@AllArgsConstructor
-@NoArgsConstructor
-public class UserRequest {
+@Data
+public class RegisterRequest {
     @NotBlank(message = "Họ tên không được để trống")
     private String fullName;
 
@@ -27,7 +23,4 @@ public class UserRequest {
     private String password;
 
     private String confirmPassword;
-
-    @NotBlank(message = "Quyền hạn (Role) là bắt buộc")
-    private String roleCode;
 }
