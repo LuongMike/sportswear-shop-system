@@ -3,20 +3,13 @@ package com.team6.ecommercesystem.service;
 import com.nimbusds.jose.JOSEException;
 import com.team6.ecommercesystem.dto.JwtInfo;
 import com.team6.ecommercesystem.dto.TokenPayLoad;
-import com.team6.ecommercesystem.dto.request.ChangePasswordRequest;
-import com.team6.ecommercesystem.dto.request.ForgotPasswordRequest;
-import com.team6.ecommercesystem.dto.request.LoginRequest;
-import com.team6.ecommercesystem.dto.request.ResetPasswordRequest;
+import com.team6.ecommercesystem.dto.request.*;
 import com.team6.ecommercesystem.dto.response.LoginResponse;
-import com.team6.ecommercesystem.model.BlackListedAccessToken;
-import com.team6.ecommercesystem.model.PasswordResetToken;
-import com.team6.ecommercesystem.model.User;
-import com.team6.ecommercesystem.model.ValidRefreshToken;
-import com.team6.ecommercesystem.repository.BlacklistedAccessTokenRepository;
-import com.team6.ecommercesystem.repository.PasswordResetTokenRepository;
-import com.team6.ecommercesystem.repository.UserRepository;
-import com.team6.ecommercesystem.repository.ValidRefreshTokenRepository;
+import com.team6.ecommercesystem.dto.response.UserResponse;
+import com.team6.ecommercesystem.model.*;
+import com.team6.ecommercesystem.repository.*;
 import com.team6.ecommercesystem.utils.PasswordUtils;
+import com.team6.ecommercesystem.utils.UserMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.*;
@@ -48,6 +41,7 @@ public class AuthenticationServiceImpl implements AuthenticationService{
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private static final int MAX_FAILED_ATTEMPTS = 5;
     private final EmailService emailService;
+    private final RoleRepository roleRepository;
 
     @Override
     public void logout(String token) throws ParseException {
@@ -329,5 +323,33 @@ public class AuthenticationServiceImpl implements AuthenticationService{
         log.info("Revoked {} refresh tokens for user: {}", revokedCount, user.getEmail());
 
         log.info("Password reset completed successfully for user: {}", user.getEmail());
+    }
+
+    @Override
+    @Transactional
+    public UserResponse register(RegisterRequest request){
+        log.info("Processing registration for email: {}", request.getEmail());
+
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new IllegalArgumentException("Email already exists");
+        }
+        if (!request.getPassword().equals(request.getConfirmPassword())) {
+            throw new IllegalArgumentException("Password confirmation does not match");
+        }
+
+        Role userRole = roleRepository.findByRoleCode("MEMBER")
+                .orElseThrow(() -> new RuntimeException("Default role USER not found"));
+
+        User user = User.builder()
+                .fullName(request.getFullName())
+                .email(request.getEmail())
+                .phoneNumber(request.getPhoneNumber())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .status(true)
+                .role(userRole)
+                .build();
+
+        userRepository.save(user);
+        return UserMapper.toUserResponse(user);
     }
 }
