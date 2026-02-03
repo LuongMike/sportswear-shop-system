@@ -3,7 +3,9 @@ package com.team6.ecommercesystem.controller;
 import com.nimbusds.jose.JOSEException;
 import com.team6.ecommercesystem.dto.request.*;
 import com.team6.ecommercesystem.dto.response.LoginResponse;
+import com.team6.ecommercesystem.dto.response.UserResponse;
 import com.team6.ecommercesystem.service.AuthenticationService;
+import com.team6.ecommercesystem.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -31,6 +33,12 @@ public class AuthenticationController {
         log.info("Login request received for email: {}", request.getEmail());
         LoginResponse response = authenticationService.login(request);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/register")
+    @Operation(summary = "User registration", description = "Public endpoint for new users")
+    public ResponseEntity<UserResponse> register(@Valid @RequestBody RegisterRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(authenticationService.register(request));
     }
 
     @PostMapping("/logout")
