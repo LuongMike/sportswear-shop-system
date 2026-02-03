@@ -25,7 +25,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserController {
     private final UserService userService;
 
-    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/register")
     @Operation(summary = "Register new user", description = "Creates a new user account (Admin only)")
     public ResponseEntity<UserResponse> createUser(@Valid @RequestBody UserRequest userRequest) {
