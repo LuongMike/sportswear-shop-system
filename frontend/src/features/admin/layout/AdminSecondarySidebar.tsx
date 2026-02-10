@@ -4,6 +4,7 @@ import {
   Users,
   Package,
   ShoppingBag,
+  BarChart3,
   Tag,
   Dumbbell,
   Palette,
@@ -23,6 +24,11 @@ const SYSTEM_MENU = [
     id: "dashboard",
     label: "Dashboard",
     icon: <LayoutDashboard className="w-5 h-5" />,
+  },
+  {
+    id: "reports",
+    label: "Báo cáo thống kê",
+    icon: <BarChart3 className="w-5 h-5" />,
   },
   {
     id: "orders",

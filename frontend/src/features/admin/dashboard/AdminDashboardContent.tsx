@@ -1,4 +1,5 @@
 import { DashboardOverview } from "@/features/admin/dashboard/DashboardOverview";
+import { ReportsPage } from "@/features/admin/reports/ReportsPage";
 import { BrandManager } from "@/features/admin/brands/BrandManager";
 import { SportManager } from "@/features/admin/sports/SportManager";
 import { ColorManager } from "@/features/admin/colors/ColorManager";
@@ -20,6 +21,8 @@ export function AdminDashboardContent({
   switch (selectedMenu) {
     case "dashboard":
       return <DashboardOverview />;
+    case "reports":
+      return <ReportsPage />;
     case "orders":
       return <OrderManager />;
     case "products":

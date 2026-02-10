@@ -72,7 +72,7 @@ export default function AdminDashboard() {
           />
 
           {/* Nội dung chính */}
-          <div className="flex-1 p-6 overflow-hidden flex flex-col">
+          <div className="flex-1 p-6 overflow-y-auto flex flex-col">
             {/* --- CASE: SYSTEM DASHBOARD --- */}
             {activePrimary === "system" && (
               <AdminDashboardContent selectedMenu={selectedMenu} />

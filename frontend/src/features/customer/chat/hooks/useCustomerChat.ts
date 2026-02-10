@@ -3,6 +3,7 @@ import { chatRoomApi, chatApi } from "@/services/chat.service";
 import type { ChatMessage } from "@/services/chat.service";
 import ws from "@/services/ws.service";
 import { useAuthStore } from "@/store/useAuthStore";
+import { ProductsAPI } from "@/services/productsApi";
 
 export function useCustomerChat() {
   const { user, accessToken } = useAuthStore();
@@ -11,7 +12,8 @@ export function useCustomerChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
-  const [isConnecting, setIsConnecting] = useState(false);
+  const [mode, setMode] = useState<"human" | "ai">("human");
+  const [isAiThinking, setIsAiThinking] = useState(false);
 
   const subscriptionRef = useRef<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -68,7 +70,6 @@ export function useCustomerChat() {
 
     ws.connect(
       () => {
-        setIsConnecting(false);
         if (subscriptionRef.current) subscriptionRef.current.unsubscribe();
 
         subscriptionRef.current = ws.subscribeRoom(roomId, (msg) => {
@@ -80,7 +81,6 @@ export function useCustomerChat() {
       },
       (err) => {
         console.error("WS Error", err);
-        setIsConnecting(false);
       }
     );
 
@@ -90,7 +90,72 @@ export function useCustomerChat() {
   }, [roomId, user]);
 
   const handleSend = async () => {
-    if (!input.trim() || !roomId) return;
+    if (!input.trim()) return;
+
+    // Chế độ trợ lý AI: không gửi WS, dùng API sản phẩm để gợi ý danh sách phù hợp
+    if (mode === "ai") {
+      const question = input.trim();
+      setInput("");
+
+      const now = new Date().toISOString();
+      const customerMsg: ChatMessage = {
+        id: Date.now(),
+        content: question,
+        sender: "CUSTOMER",
+        sentAt: now,
+        type: "TEXT",
+      };
+      setMessages((prev) => [...prev, customerMsg]);
+      setIsAiThinking(true);
+
+      try {
+        const res = await ProductsAPI.getProducts({ search: question }, 1, 5);
+        const products = res.data ?? [];
+
+        let content: string;
+
+        if (!products.length) {
+          content =
+            "Mình chưa tìm thấy sản phẩm nào khớp chính xác với mô tả của bạn.\n\n" +
+            "Bạn có thể thử lại với mô tả chi tiết hơn (ví dụ: loại sản phẩm, màu sắc, size, giới tính...).";
+        } else {
+          const lines = products.map(
+            (p, idx) =>
+              `${idx + 1}. ${p.name}`
+          );
+          content =
+            "Dựa trên yêu cầu của bạn, mình gợi ý một vài sản phẩm sau:\n\n" +
+            lines.join("\n");
+        }
+
+        const aiMsg: ChatMessage = {
+          id: Date.now() + 1,
+          content,
+          sender: "ADMIN", // hiển thị phía hỗ trợ
+          sentAt: new Date().toISOString(),
+          type: "TEXT",
+        };
+        setMessages((prev) => [...prev, aiMsg]);
+      } catch (err) {
+        console.error("AI assistant error:", err);
+        const fallback: ChatMessage = {
+          id: Date.now() + 2,
+          content:
+            "Xin lỗi, hiện tại mình không truy cập được dữ liệu sản phẩm để gợi ý.\n\n" +
+            "Bạn có thể thử lại sau ít phút, hoặc mô tả lại sản phẩm bạn muốn tìm.",
+          sender: "ADMIN",
+          sentAt: new Date().toISOString(),
+          type: "TEXT",
+        };
+        setMessages((prev) => [...prev, fallback]);
+      } finally {
+        setIsAiThinking(false);
+      }
+      return;
+    }
+
+    // Chế độ chat với nhân viên (WS như cũ)
+    if (!roomId) return;
 
     const payload = {
       content: input,
@@ -118,5 +183,8 @@ export function useCustomerChat() {
     messagesEndRef,
     user,
     isLoggedIn: !!user,
+    mode,
+    setMode,
+    isAiThinking,
   };
 }

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "../../components/ui/radio-group";
+import { saveLatestOrder } from "@/utils/orderStorage";
 import { toast } from "sonner";
 import { Loader2, Plus } from "lucide-react";
 import {
@@ -26,17 +27,16 @@ const CheckoutPage = () => {
   const { cart, fetchCart } = useCartStore();
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
-
-  const [selectedAddressId, setSelectedAddressId] = useState<number | null>(
-    null,
-  );
-  const [selectedPhoneId, setSelectedPhoneId] = useState<number | null>(null);
   const [note, setNote] = useState("");
   const [isAddressDialogOpen, setIsAddressDialogOpen] = useState(false);
   const [isPhoneDialogOpen, setIsPhoneDialogOpen] = useState(false);
   const [newAddress, setNewAddress] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"cod" | "bank">("cod");
+  const [selectedAddressId, setSelectedAddressId] = useState<number | null>(
+    null,
+  );
+  const [selectedPhoneId, setSelectedPhoneId] = useState<number | null>(null);
 
   // Fetch Cart on mount
   useEffect(() => {
@@ -55,20 +55,22 @@ const CheckoutPage = () => {
     queryFn: UserAPI.getPhones,
   });
 
-  // Set defaults
   useEffect(() => {
-    if (addresses && addresses.length > 0 && !selectedAddressId) {
-      const defaultAddr = addresses.find((a) => a.is_default) || addresses[0];
-      setSelectedAddressId(defaultAddr.id);
-    }
-  }, [addresses, selectedAddressId]);
+    if (!addresses || addresses.length === 0) return;
+
+    setSelectedAddressId(
+      (prev) =>
+        prev ?? addresses.find((a) => a.is_default)?.id ?? addresses[0].id,
+    );
+  }, [addresses]);
 
   useEffect(() => {
-    if (phones && phones.length > 0 && !selectedPhoneId) {
-      const defaultPhone = phones.find((p) => p.is_default) || phones[0];
-      setSelectedPhoneId(defaultPhone.id);
-    }
-  }, [phones, selectedPhoneId]);
+    if (!phones || phones.length === 0) return;
+
+    setSelectedPhoneId(
+      (prev) => prev ?? phones.find((p) => p.is_default)?.id ?? phones[0].id,
+    );
+  }, [phones]);
 
   // Mutations
   const createAddressMutation = useMutation({
@@ -103,14 +105,97 @@ const CheckoutPage = () => {
 
   const createOrderMutation = useMutation({
     mutationFn: OrderAPI.createOrder,
-    onSuccess: () => {
-      toast.success("Đặt hàng thành công!");
-      // Clear cart locally if needed, but backend handles it
-      fetchCart();
-      navigate(`/account/orders`);
+
+    onSuccess: (res: any) => {
+      // 🔥 TẠO ORDER FRONTEND TỪ RESPONSE
+      const selectedAddress = addresses?.find(
+        (a) => a.id === selectedAddressId,
+      );
+
+      const selectedPhone = phones?.find((p) => p.id === selectedPhoneId);
+
+      const orderForStorage = {
+        orderId: res.orderId,
+        orderCode: res.orderCode,
+        orderDate: new Date().toISOString(),
+        status: "PENDING",
+
+        // 🔥 NGƯỜI ĐẶT
+        customerName: user?.full_name,
+        customerPhone: selectedPhone?.phone_number,
+
+        shippingAddress: selectedAddress?.address_detail ?? "",
+
+        paymentMethod: paymentMethod,
+
+        totalFinalAmount: totalAmount,
+
+        items: cart.items.map((item) => ({
+          productName: item.product.name,
+          variantDetails: `${item.variant.color?.name} / ${item.variant.size?.name}`,
+          quantity: item.quantity,
+          price: item.variant.price,
+          mainImageUrl: item.variant.image || item.product.mainImageUrl || "",
+        })),
+      };
+
+      // ✅ LƯU LOCALSTORAGE
+      saveLatestOrder(orderForStorage as any);
+
+      if (paymentMethod === "cod") {
+        toast.success("Đặt hàng thành công!");
+        fetchCart();
+        navigate("/account/orders");
+        return;
+      }
+
+      if (paymentMethod === "bank") {
+        navigate(`/payment/${res.paymentId}`);
+      }
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || "Lỗi khi đặt hàng");
+
+    onError: () => {
+      toast.info("Đang dùng dữ liệu demo");
+
+      const selectedAddress = addresses?.find(
+        (a) => a.id === selectedAddressId,
+      );
+
+      const selectedPhone = phones?.find((p) => p.id === selectedPhoneId);
+
+      const fakeOrder = {
+        orderId: Date.now(),
+        orderCode: `DEMO-${Date.now()}`,
+        orderDate: new Date().toISOString(),
+        status: "PENDING",
+
+        // 🔥 NGƯỜI ĐẶT
+        customerName: user?.full_name,
+        customerPhone: selectedPhone?.phone_number,
+
+        shippingAddress: selectedAddress?.address_detail ?? "",
+
+        paymentMethod: paymentMethod,
+
+        totalFinalAmount: totalAmount,
+
+        items: cart.items.map((item) => ({
+          productName: item.product.name,
+          variantDetails: `${item.variant.color?.name} / ${item.variant.size?.name}`,
+          quantity: item.quantity,
+          price: item.variant.price,
+          mainImageUrl: item.variant.image || item.product.mainImageUrl || "",
+        })),
+      };
+
+      saveLatestOrder(fakeOrder as any);
+
+      if (paymentMethod === "cod") {
+        navigate("/account/orders");
+        return;
+      }
+
+      navigate(`/payment/${Date.now()}`);
     },
   });
 
@@ -119,28 +204,54 @@ const CheckoutPage = () => {
       toast.error("Giỏ hàng trống");
       return;
     }
-    if (isLocalCart(cart)) {
-      toast.error(
-        "Giỏ hàng đang dùng dữ liệu demo. Kết nối API để thanh toán.",
-      );
-      return;
-    }
-    if (!selectedAddressId) {
-      toast.error("Vui lòng chọn địa chỉ giao hàng");
-      return;
-    }
-    if (!selectedPhoneId) {
-      toast.error("Vui lòng chọn số điện thoại");
+
+    if (!selectedAddressId || !selectedPhoneId) {
+      toast.error("Thiếu thông tin giao hàng");
       return;
     }
 
-    createOrderMutation.mutate({
-      cartId: cart.id,
-      shippingAddressId: selectedAddressId,
-      userPhoneId: selectedPhoneId,
-      note,
-      paymentMethod,
-    });
+    createOrderMutation.mutate(
+      {
+        cartId: cart.id,
+        shippingAddressId: selectedAddressId,
+        userPhoneId: selectedPhoneId,
+        note,
+        paymentMethod,
+      },
+      {
+        onSuccess: (res: any) => {
+          // ✅ API THẬT OK
+          if (paymentMethod === "cod") {
+            toast.success("Đặt hàng thành công!");
+            fetchCart();
+            navigate("/account/orders");
+            return;
+          }
+
+          if (paymentMethod === "bank") {
+            navigate(`/payment/${res.paymentId}`);
+          }
+        },
+
+        onError: () => {
+          // 🧪 FALLBACK DEMO
+          console.warn("API lỗi → dùng dữ liệu ảo");
+
+          const fakePaymentId = Date.now(); // fake id
+
+          toast.info("Đang dùng dữ liệu demo để thanh toán");
+
+          if (paymentMethod === "cod") {
+            navigate("/account/orders");
+            return;
+          }
+
+          if (paymentMethod === "bank") {
+            navigate(`/payment/${fakePaymentId}`);
+          }
+        },
+      },
+    );
   };
 
   if (!user) {
@@ -464,15 +575,6 @@ const CheckoutPage = () => {
                       </Label>
                     </div>
                   </RadioGroup>
-
-                  {paymentMethod === "bank" && (
-                    <div className="mt-4 p-4 bg-blue-50 rounded-md text-sm">
-                      <img
-                        src="/images/bank-transfer.png"
-                        alt="Bank Transfer"
-                      />
-                    </div>
-                  )}
                 </div>
               </div>
 

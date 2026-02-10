@@ -286,9 +286,14 @@ export const collectionsCategories: NavigationSection[] = [
   },
 ];
 
+export const logoBrand = {
+  src: "/brands/default-logo.png",
+  alt: "Default Brand Logo",
+};
+
 // Helper function to get dropdown content
 export const getDropdownContent = (
-  categoryTitle: string
+  categoryTitle: string,
 ): NavigationSection[] => {
   switch (categoryTitle) {
     case "Nam":

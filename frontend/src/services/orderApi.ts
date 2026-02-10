@@ -2,7 +2,7 @@ import api from "@/lib/axios";
 
 export interface OrderItem {
   quantity: number;
-  price: string;
+  price: number | string;
   productName: string;
   variantDetails: string;
   mainImageUrl: string | null;
@@ -13,10 +13,14 @@ export interface Order {
   orderCode: string;
   orderDate: string;
   status: string;
-  totalFinalAmount: string;
-  receiverName: string;
+  totalFinalAmount: number | string;
+  customerName: string;
   shippingAddress: string;
   items: OrderItem[];
+  customerPhone: number;
+  shipperName: string;
+  shipperPhone: string;
+  paymentMethod?: "cod" | "bank" | string;
 }
 
 export interface CreateOrderPayload {
@@ -27,9 +31,19 @@ export interface CreateOrderPayload {
 }
 
 export const OrderAPI = {
-  createOrder: async (payload: CreateOrderPayload) => {
-    const response = await api.post("/api/orders", payload);
-    return response.data.data;
+  // createOrder: async (payload: CreateOrderPayload) => {
+  //   const response = await api.post("/api/orders", payload);
+  //   return response.data.data;
+  // },
+
+  createOrder(data: {
+    cartId: number;
+    shippingAddressId: number;
+    userPhoneId: number;
+    note?: string;
+    paymentMethod: "cod" | "bank";
+  }) {
+    return api.post("/orders", data).then((res) => res.data);
   },
 
   getOrders: async (page = 1, limit = 10) => {

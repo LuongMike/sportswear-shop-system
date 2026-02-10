@@ -63,11 +63,7 @@ const ProductInfo = ({
       toast.error("Vui lòng chọn màu sắc và kích thước");
       return;
     }
-    await addToCart(
-      currentVariant.id,
-      quantity,
-      getProductInfoForCart()
-    );
+    await addToCart(currentVariant.id, quantity, getProductInfoForCart());
   };
 
   const handleBuyNow = async () => {
@@ -75,11 +71,7 @@ const ProductInfo = ({
       toast.error("Vui lòng chọn màu sắc và kích thước");
       return;
     }
-    await addToCart(
-      currentVariant.id,
-      quantity,
-      getProductInfoForCart()
-    );
+    await addToCart(currentVariant.id, quantity, getProductInfoForCart());
     navigate("/checkout");
   };
 
@@ -126,7 +118,7 @@ const ProductInfo = ({
           {options.colors.map((color) => {
             // Find a representative image for this color
             const variantWithColor = product.variants.find(
-              (v) => v.colorId === color.id
+              (v) => v.colorId === color.id,
             );
             const imageUrl = variantWithColor?.imageUrls[0];
 
@@ -136,7 +128,7 @@ const ProductInfo = ({
                   "w-16 h-16 border rounded p-1 overflow-hidden",
                   selectedColorId === color.id
                     ? "border-black ring-1 ring-black"
-                    : "border-gray-200 hover:border-gray-400"
+                    : "border-gray-200 hover:border-gray-400",
                 )}
                 key={color.id}
                 onClick={() => setSelectedColorId(color.id)}
@@ -164,9 +156,6 @@ const ProductInfo = ({
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-gray-900">Kích thước</span>
-          <button className="text-sm text-blue-600 underline hover:text-blue-800">
-            Hướng dẫn chọn size
-          </button>
         </div>
         <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
           {options.sizes.map((size) => {
@@ -183,7 +172,7 @@ const ProductInfo = ({
                     ? "border-black bg-black text-white"
                     : "border-gray-200 bg-white text-gray-900 hover:border-gray-900",
                   !isAvailable &&
-                    "opacity-40 cursor-not-allowed bg-gray-50 text-gray-400 hover:border-gray-200 decoration-slice line-through"
+                    "opacity-40 cursor-not-allowed bg-gray-50 text-gray-400 hover:border-gray-200 decoration-slice line-through",
                 )}
               >
                 {size}

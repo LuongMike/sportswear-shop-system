@@ -17,6 +17,7 @@ import { useAuthStore } from "./store/useAuthStore";
 import QueryProvider from "./providers/QueryProvider";
 import MainLayout from "./components/layout/MainLayout";
 import ChatBubble from "./components/common/ChatBubble";
+import PaymentPage from "./pages/payment/PaymentPage";
 
 const App = () => {
   const { initializeAuth } = useAuthStore();
@@ -79,6 +80,7 @@ const App = () => {
 
             {/* Checkout & Account */}
             <Route path="/checkout" element={<CheckoutPage />} />
+            <Route path="/payment/:paymentId" element={<PaymentPage />} />
             <Route path="/account/orders" element={<OrdersPage />} />
             <Route path="/account/profile" element={<ProfilePage />} />
           </Route>
