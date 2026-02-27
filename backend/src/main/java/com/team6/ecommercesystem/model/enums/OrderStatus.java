@@ -5,5 +5,6 @@ public enum OrderStatus {
     PAID,       // Đã thanh toán (Chờ giao)
     SHIPPED,    // Đang giao hàng
     DELIVERED,  // Giao thành công
+    COMPLETED,  //Đơn hàng hoàn tất
     CANCELLED   // Đã hủy
 }

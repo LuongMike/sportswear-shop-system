@@ -6,6 +6,7 @@ import com.team6.ecommercesystem.model.Order;
 import com.team6.ecommercesystem.model.OrderItem;
 import com.team6.ecommercesystem.model.ProductVariant;
 
+import java.math.BigDecimal;
 import java.util.stream.Collectors;
 
 public class OrderMapper {
@@ -39,7 +40,7 @@ public class OrderMapper {
                 .color(v.getColor())
                 .price(item.getPrice()) // Lưu ý: Lấy giá từ OrderItem (giá lúc mua) chứ không phải giá hiện tại của Variant
                 .quantity(item.getQuantity())
-                .subTotal(item.getPrice() * item.getQuantity())
+                .subTotal(item.getPrice().multiply(new BigDecimal(item.getQuantity())))
                 .variantImage(imgUrl)
                 .build();
     }

@@ -3,6 +3,8 @@ package com.team6.ecommercesystem.dto.response;
 import lombok.Builder;
 import lombok.Data;
 
+import java.math.BigDecimal;
+
 @Data
 @Builder
 public class OrderItemResponse {
@@ -11,8 +13,8 @@ public class OrderItemResponse {
     private String productName;
     private String size;        // Quan trọng: Size lúc mua
     private String color;       // Quan trọng: Màu lúc mua
-    private Double price;       // Giá tại thời điểm mua
+    private BigDecimal price;       // Giá tại thời điểm mua
     private Integer quantity;
-    private Double subTotal;    // Thành tiền (price * quantity)
+    private BigDecimal subTotal;    // Thành tiền (price * quantity)
     private String variantImage; // Ảnh của biến thể đó
 }
