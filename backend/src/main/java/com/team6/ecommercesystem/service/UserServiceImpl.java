@@ -1,5 +1,6 @@
 package com.team6.ecommercesystem.service;
 
+import com.team6.ecommercesystem.dto.request.ProfileUpdateRequest;
 import com.team6.ecommercesystem.dto.request.RegisterRequest;
 import com.team6.ecommercesystem.dto.request.UserRequest;
 import com.team6.ecommercesystem.dto.request.UserUpdateRequest;
@@ -14,6 +15,7 @@ import com.team6.ecommercesystem.repository.ValidRefreshTokenRepository;
 import com.team6.ecommercesystem.utils.UserMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -86,6 +88,46 @@ public class UserServiceImpl implements UserService{
         userRepository.save(user);
 
         validRefreshTokenRepository.revokeAllByUser(user);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserDetailResponse getMyProfile() {
+        // Lấy ID từ Token
+        String userIdStr = SecurityContextHolder.getContext().getAuthentication().getName();
+        Long userId = Long.parseLong(userIdStr);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+
+        return UserMapper.toDetailDto(user);
+    }
+
+    @Override
+    @Transactional
+    public UserDetailResponse updateMyProfile(ProfileUpdateRequest request) {
+        // 1. Lấy ID từ Token đang đăng nhập
+        String userIdStr = SecurityContextHolder.getContext().getAuthentication().getName();
+        Long userId = Long.parseLong(userIdStr);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
+
+        // 2. Cập nhật thông tin (Chỉ cho phép đổi Tên và Số điện thoại)
+        if (request.getFullName() != null && !request.getFullName().isBlank()) {
+            user.setFullName(request.getFullName());
+        }
+
+        if (request.getPhoneNumber() != null && !request.getPhoneNumber().isBlank()) {
+            // Kiểm tra xem số điện thoại mới có bị trùng với người khác không
+            if (!user.getPhoneNumber().equals(request.getPhoneNumber()) &&
+                    userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
+                throw new IllegalArgumentException("Số điện thoại này đã được sử dụng bởi tài khoản khác.");
+            }
+            user.setPhoneNumber(request.getPhoneNumber());
+        }
+
+        return UserMapper.toDetailDto(userRepository.save(user));
     }
 
     private void validateNewUser(String email, String phone, String password, String confirmPassword) {
