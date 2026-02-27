@@ -18,9 +18,11 @@ public class ProductMapper {
                 .color(variant.getColor())
                 .price(variant.getPrice())
                 .stockQuantity(variant.getStockQuantity())
-                .imageUrls(variant.getImages().stream()
-                        .map(ProductImage::getImageUrl)
-                        .collect(Collectors.toList()))
+                .imageUrls(variant.getImages() != null ?
+                        variant.getImages().stream()
+                                .map(ProductImage::getImageUrl)
+                                .collect(Collectors.toList())
+                        : new java.util.ArrayList<>())
                 .build();
     }
 

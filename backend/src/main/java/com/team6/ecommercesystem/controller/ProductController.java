@@ -1,10 +1,12 @@
 package com.team6.ecommercesystem.controller;
 
+import com.team6.ecommercesystem.dto.AIClassificationResult;
 import com.team6.ecommercesystem.dto.request.ProductRequest;
 import com.team6.ecommercesystem.dto.request.VariantRequest;
 import com.team6.ecommercesystem.dto.response.ProductDetailResponse;
 import com.team6.ecommercesystem.dto.response.ProductSummaryResponse;
 import com.team6.ecommercesystem.dto.response.VariantResponse;
+import com.team6.ecommercesystem.service.AIProductService;
 import com.team6.ecommercesystem.service.ProductServiceImpl;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +15,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin/products")
@@ -20,6 +23,7 @@ import java.util.List;
 @Tag(name = "Product Management", description = "Products management endpoints")
 public class ProductController {
     private final ProductServiceImpl productService;
+    private final AIProductService aiProductService;
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -76,5 +80,23 @@ public class ProductController {
     public ResponseEntity<Void> updateStock(@PathVariable Long vId, @RequestParam Integer quantity) {
         productService.updateStock(vId, quantity);
         return ResponseEntity.noContent().build();
+    }
+
+    // BƯỚC 1: Admin nhấn "AI Suggest" - Chỉ trả về gợi ý, không lưu
+    @PostMapping("/ai-suggest")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<AIClassificationResult> suggest(@RequestBody Map<String, String> payload) {
+        return ResponseEntity.ok(aiProductService.classifyProduct(
+                payload.get("productName"),
+                payload.get("description")
+        ));
+    }
+
+    // BƯỚC 2: Admin kiểm tra, sửa đổi rồi mới nhấn "Confirm" để lưu
+    @PostMapping("/admin-confirm")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ProductDetailResponse> confirm(@RequestBody ProductRequest req) {
+        // req này chứa dữ liệu Admin đã chốt (có thể khác với AI gợi ý)
+        return ResponseEntity.ok(productService.createProduct(req));
     }
 }
