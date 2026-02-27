@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
@@ -25,7 +26,7 @@ public class PaymentServiceImpl implements PaymentService {
                 .orElseThrow(() -> new RuntimeException("Order not found"));
 
         // Số tiền cần nhân với 100 (VNPay quy định)
-        long amount = (long) (order.getTotalAmount() * 100);
+        long amount = order.getTotalAmount().multiply(new BigDecimal("100")).longValue();
 
         Map<String, String> vnp_Params = new HashMap<>();
         vnp_Params.put("vnp_Version", paymentConfig.getVnp_Version());

@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,6 +27,9 @@ import java.io.IOException;
 public class PaymentController {
     private final PaymentService paymentService;
     private final OrderRepository orderRepository;
+
+    @Value("${app.frontend.url}")
+    private String frontendUrl;
 
     @GetMapping("/create_payment/{orderId}")
     @Operation(summary = "Generate VNPay URL")
@@ -51,14 +55,14 @@ public class PaymentController {
                     orderRepository.save(order);
 
                     // Redirect về trang Frontend "Thành công"
-                    response.sendRedirect("http://localhost:3000/payment-success?orderId=" + orderId);
+                    response.sendRedirect(frontendUrl +"/payment-success?orderId=" + orderId);
                 } else {
                     // Thanh toán thất bại
                     order.setStatus(OrderStatus.CANCELLED); // Hoặc giữ Pending tùy logic
                     orderRepository.save(order);
 
                     // Redirect về trang Frontend "Thất bại"
-                    response.sendRedirect("http://localhost:3000/payment-failed?orderId=" + orderId);
+                    response.sendRedirect(frontendUrl+"/payment-failed?orderId=" + orderId);
                 }
             }
         }
