@@ -116,6 +116,7 @@ public class AuthenticationServiceImpl implements AuthenticationService{
             return LoginResponse.builder()
                     .accessToken(accessPayload.getToken())
                     .refreshToken(refreshPayload.getToken())
+                    .user(UserMapper.toUserResponse(user))
                     .build();
         } catch (AuthenticationException e) {
             if (e instanceof BadCredentialsException){
@@ -188,6 +189,7 @@ public class AuthenticationServiceImpl implements AuthenticationService{
         return LoginResponse.builder()
                 .accessToken(newAccessPayload.getToken())
                 .refreshToken(newRefreshPayLoad.getToken())
+                .user(UserMapper.toUserResponse(user))
                 .build();
     }
 
