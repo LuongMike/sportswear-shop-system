@@ -1,5 +1,6 @@
 package com.team6.ecommercesystem.service;
 
+import com.team6.ecommercesystem.dto.request.ProfileUpdateRequest;
 import com.team6.ecommercesystem.dto.request.RegisterRequest;
 import com.team6.ecommercesystem.dto.request.UserRequest;
 import com.team6.ecommercesystem.dto.request.UserUpdateRequest;
@@ -15,5 +16,6 @@ public interface UserService {
     UserDetailResponse getUserDetail(Long id);
     UserDetailResponse updateUser(Long id, UserUpdateRequest request);
     void deleteUser(Long id);
-
+    UserDetailResponse getMyProfile();
+    UserDetailResponse updateMyProfile(ProfileUpdateRequest request);
 }
