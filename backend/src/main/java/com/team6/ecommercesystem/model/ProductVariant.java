@@ -3,6 +3,8 @@ package com.team6.ecommercesystem.model;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -20,7 +22,7 @@ public class ProductVariant {
     private String sku; // Mã quản lý kho riêng biệt
     private String color;
     private String size;
-    private Double price;
+    private BigDecimal price;
     private Integer stockQuantity;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -28,5 +30,6 @@ public class ProductVariant {
     private Product product;
 
     @OneToMany(mappedBy = "variant", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<ProductImage> images;
+    @Builder.Default
+    private List<ProductImage> images = new ArrayList<>();
 }

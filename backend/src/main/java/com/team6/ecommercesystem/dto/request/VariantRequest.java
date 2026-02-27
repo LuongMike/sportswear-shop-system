@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Data @Builder
@@ -13,7 +14,7 @@ import java.util.List;
 public class VariantRequest {
     private String size;
     private String color;
-    private Double price;
+    private BigDecimal price;
     private Integer stockQuantity;
     private String sku;
     private List<String> imageUrls;

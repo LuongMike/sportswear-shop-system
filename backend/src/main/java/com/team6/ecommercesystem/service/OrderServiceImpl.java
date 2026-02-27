@@ -4,12 +4,14 @@ import com.team6.ecommercesystem.dto.request.OrderCreationRequest;
 import com.team6.ecommercesystem.dto.response.OrderResponse;
 import com.team6.ecommercesystem.model.*;
 import com.team6.ecommercesystem.model.enums.OrderStatus;
+import com.team6.ecommercesystem.model.enums.PaymentMethod;
 import com.team6.ecommercesystem.repository.*;
 import com.team6.ecommercesystem.utils.OrderMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -67,7 +69,7 @@ public class OrderServiceImpl implements  OrderService {
 
         // 4. Xử lý từng Item: Check kho -> Trừ kho -> Tạo OrderItem
         List<OrderItem> orderItems = new ArrayList<>();
-        double totalAmount = 0;
+        BigDecimal totalAmount = BigDecimal.ZERO;
 
         for (CartItem cartItem : cart.getItems()) {
             ProductVariant variant = cartItem.getVariant();
@@ -90,8 +92,11 @@ public class OrderServiceImpl implements  OrderService {
                     .build();
 
             orderItems.add(orderItem);
-            totalAmount += orderItem.getPrice() * orderItem.getQuantity();
-        }
+
+            // Tính: subTotal = price * quantity
+            BigDecimal subTotal = orderItem.getPrice().multiply(new BigDecimal(orderItem.getQuantity()));
+            // Tính: totalAmount = totalAmount + subTotal
+            totalAmount = totalAmount.add(subTotal);        }
 
         // 5. Hoàn tất Order
         order.setOrderItems(orderItems);
@@ -111,5 +116,41 @@ public class OrderServiceImpl implements  OrderService {
         return orderRepository.findByUserIdOrderByOrderDateDesc(user.getId()).stream()
                 .map(OrderMapper::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public OrderResponse updateOrderStatus(Long orderId, OrderStatus newStatus) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        User currentUser = getCurrentUser();
+        String roleCode = currentUser.getRole().getRoleCode();
+
+        OrderStatus currentStatus = order.getStatus();
+        PaymentMethod paymentMethod = order.getPaymentMethod();
+
+        if (roleCode.equals("SHIPPER")){
+            boolean isValidTransition = false;
+
+            //1. Lấy hàng đi giao
+            if (newStatus == OrderStatus.SHIPPED) {
+                if (paymentMethod == PaymentMethod.COD && currentStatus == OrderStatus.PENDING) isValidTransition = true;
+                if (paymentMethod != PaymentMethod.COD && currentStatus == OrderStatus.PAID) isValidTransition = true;
+            }
+            // 2. Giao thành công hoặc thất bại
+            else if (currentStatus == OrderStatus.SHIPPED &&
+                    (newStatus == OrderStatus.DELIVERED || newStatus == OrderStatus.CANCELLED)) {
+                isValidTransition = true;
+            }
+            if (!isValidTransition) {
+                throw new IllegalArgumentException("Shipper không được phép chuyển trạng thái từ " +
+                        currentStatus + " sang " + newStatus + " cho đơn hàng " + paymentMethod);
+            }
+        } else if (!roleCode.equals("ADMIN")) {
+            throw new RuntimeException("Bạn không có quyền cập nhật trạng thái đơn hàng");
+        }
+        // Cập nhật và lưu
+        order.setStatus(newStatus);
+        return OrderMapper.toResponse(orderRepository.save(order));
     }
 }

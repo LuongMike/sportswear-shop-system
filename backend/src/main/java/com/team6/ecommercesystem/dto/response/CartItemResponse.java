@@ -3,6 +3,8 @@ package com.team6.ecommercesystem.dto.response;
 import lombok.Builder;
 import lombok.Data;
 
+import java.math.BigDecimal;
+
 @Data
 @Builder
 public class CartItemResponse {
@@ -11,9 +13,9 @@ public class CartItemResponse {
     private String productName;
     private String size;
     private String color;
-    private Double price;
+    private BigDecimal price;
     private Integer quantity;
-    private Double subTotal;    // price * quantity
+    private BigDecimal subTotal;    // price * quantity
     private String imageUrl;    // Ảnh đại diện của variant
     private Integer maxStock;
 }

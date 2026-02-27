@@ -6,6 +6,7 @@ import com.team6.ecommercesystem.model.Cart;
 import com.team6.ecommercesystem.model.CartItem;
 import com.team6.ecommercesystem.model.ProductVariant;
 
+import java.math.BigDecimal;
 import java.util.stream.Collectors;
 
 public class CartMapper {
@@ -20,7 +21,9 @@ public class CartMapper {
 
     private static CartItemResponse toItemResponse(CartItem item) {
         ProductVariant v = item.getVariant();
-        String imgUrl = v.getImages().isEmpty() ? "" : v.getImages().get(0).getImageUrl();
+        String imgUrl = (v.getImages() == null || v.getImages().isEmpty())
+                ? ""
+                : v.getImages().get(0).getImageUrl();
 
         return CartItemResponse.builder()
                 .id(item.getId())
@@ -30,7 +33,7 @@ public class CartMapper {
                 .color(v.getColor())
                 .price(v.getPrice())
                 .quantity(item.getQuantity())
-                .subTotal(v.getPrice() * item.getQuantity())
+                .subTotal(v.getPrice().multiply(new BigDecimal(item.getQuantity())))
                 .imageUrl(imgUrl)
                 .maxStock(v.getStockQuantity())
                 .build();

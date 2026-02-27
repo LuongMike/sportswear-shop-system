@@ -3,6 +3,7 @@ package com.team6.ecommercesystem.model;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,9 +29,9 @@ public class Cart {
     private List<CartItem> items = new ArrayList<>();
 
     // Helper method để tính tổng tiền tạm tính
-    public Double getTotalPrice() {
+    public BigDecimal getTotalPrice() {
         return items.stream()
-                .mapToDouble(item -> item.getVariant().getPrice() * item.getQuantity())
-                .sum();
+                .map(item -> item.getVariant().getPrice().multiply(new BigDecimal(item.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }

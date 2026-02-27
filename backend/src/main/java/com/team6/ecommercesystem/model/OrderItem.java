@@ -3,6 +3,8 @@ package com.team6.ecommercesystem.model;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
+
 @Entity
 @Table(name = "order_items")
 @Getter
@@ -26,5 +28,5 @@ public class OrderItem {
     private Integer quantity;
 
     // Lưu giá tại thời điểm mua (đề phòng giá sản phẩm thay đổi sau này)
-    private Double price;
+    private BigDecimal price;
 }

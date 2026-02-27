@@ -5,6 +5,7 @@ import com.team6.ecommercesystem.model.enums.PaymentMethod;
 import lombok.Builder;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -14,7 +15,7 @@ public class OrderResponse {
     private Long id;
     private LocalDateTime orderDate;
     private OrderStatus status;
-    private Double totalAmount;
+    private BigDecimal totalAmount;
     private PaymentMethod paymentMethod;
 
     // Thông tin giao hàng snapshot
