@@ -54,7 +54,7 @@ const App = () => {
 
             {/* Collections routes - All products */}
             <Route path="/collections" element={<ProductsPage />} />
-            <Route path="/products/:slug" element={<ProductDetailPage />} />
+            <Route path="/product/:slug" element={<ProductDetailPage />} />
 
             {/* Collections routes - 3 cấp độ */}
             <Route path="/collections/:category" element={<ProductsPage />} />

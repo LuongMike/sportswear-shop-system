@@ -1,39 +1,53 @@
 import api from "@/lib/axios";
 
-export interface UserAddress {
-  id: number;
-  user_id: number;
-  address_detail: string;
-  is_default: boolean;
+export interface UserProfile {
+  id?: number;
+  email?: string;
+  fullName?: string;
+  full_name?: string;
+  phone?: string;
+  role?: string;
+  status?: string;
+  [key: string]: unknown;
 }
 
-export interface UserPhone {
+/** Khớp hoàn toàn với Entity UserAddress.java */
+export interface UserAddress {
   id: number;
-  user_id: number;
-  phone_number: string;
-  is_default: boolean;
+  recipientName: string;
+  phoneNumber: string;
+  city: string;
+  district: string;
+  ward: string;
+  street: string;
+  isDefault: boolean;
 }
 
 export const UserAPI = {
-  getAddresses: async () => {
+  getProfile: async (): Promise<UserProfile> => {
+    const response = await api.get("/api/user/profile/me");
+    return (response.data?.data ?? response.data) as UserProfile;
+  },
+
+  updateProfile: async (data: Partial<UserProfile>): Promise<UserProfile> => {
+    const response = await api.put("/api/user/profile/me", data);
+    return (response.data?.data ?? response.data) as UserProfile;
+  },
+
+  getAddresses: async (): Promise<UserAddress[]> => {
     const response = await api.get("/api/user/addresses");
-    return response.data.data as UserAddress[];
+    const list = response.data?.data ?? response.data ?? [];
+    return Array.isArray(list) ? list : [];
   },
 
-  createAddress: async (data: {
-    address_detail: string;
-    is_default?: boolean;
-  }) => {
+  createAddress: async (data: Omit<UserAddress, "id" | "isDefault">) => {
     const response = await api.post("/api/user/addresses", data);
-    return response.data.data as UserAddress;
+    return response.data;
   },
 
-  updateAddress: async (
-    id: number,
-    data: { address_detail?: string; is_default?: boolean }
-  ) => {
+  updateAddress: async (id: number, data: Partial<UserAddress>) => {
     const response = await api.put(`/api/user/addresses/${id}`, data);
-    return response.data.data as UserAddress;
+    return response.data;
   },
 
   deleteAddress: async (id: number) => {
@@ -41,26 +55,8 @@ export const UserAPI = {
     return response.data;
   },
 
-  getPhones: async () => {
-    const response = await api.get("/api/user/phones");
-    return response.data.data as UserPhone[];
-  },
-
-  createPhone: async (data: { phone_number: string; is_default?: boolean }) => {
-    const response = await api.post("/api/user/phones", data);
-    return response.data.data as UserPhone;
-  },
-
-  updatePhone: async (
-    id: number,
-    data: { phone_number?: string; is_default?: boolean }
-  ) => {
-    const response = await api.put(`/api/user/phones/${id}`, data);
-    return response.data.data as UserPhone;
-  },
-
-  deletePhone: async (id: number) => {
-    const response = await api.delete(`/api/user/phones/${id}`);
+  setDefaultAddress: async (id: number) => {
+    const response = await api.patch(`/api/user/addresses/${id}/default`);
     return response.data;
   },
 };

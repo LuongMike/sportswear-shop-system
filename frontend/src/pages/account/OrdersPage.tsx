@@ -21,7 +21,7 @@ const OrdersPage = () => {
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["my-orders"],
-    queryFn: () => OrderAPI.getOrders(1, 100),
+    queryFn: () => OrderAPI.getOrders(),
     retry: 1,
   });
 
@@ -31,7 +31,9 @@ const OrdersPage = () => {
     ? latestOrder
       ? [latestOrder]
       : []
-    : data?.orders || [];
+    : Array.isArray(data)
+      ? data
+      : [];
 
   if (isLoading) {
     return (
@@ -80,10 +82,10 @@ const OrdersPage = () => {
 
         <div className="space-y-4">
           {orders.map((order) => (
-            <div key={order.orderId} className="bg-white border rounded-lg">
+            <div key={order.id} className="bg-white border rounded-lg">
               <div className="p-4 border-b flex justify-between bg-gray-50">
                 <div>
-                  <p className="font-medium">Đơn hàng #{order.orderCode}</p>
+                  <p className="font-medium">Đơn hàng #{order.id}</p>
                   <p className="text-sm text-gray-500">
                     {new Date(order.orderDate).toLocaleString("vi-VN")}
                   </p>
@@ -92,19 +94,18 @@ const OrdersPage = () => {
                   {order.status}
                 </Badge>
               </div>
-
               <div className="p-4 space-y-4">
                 {order.items.map((item, idx) => (
                   <div key={idx} className="flex gap-4">
                     <img
-                      src={item.mainImageUrl ?? "/product-placeholder.svg"}
+                      src={item.variantImage ?? "/product-placeholder.svg"}
                       className="w-20 h-20 rounded object-cover"
                       alt={item.productName}
                     />
                     <div className="flex-1">
                       <p className="font-medium">{item.productName}</p>
                       <p className="text-sm text-gray-500">
-                        {item.variantDetails} × {item.quantity}
+                        {item.color} / {item.size} × {item.quantity}
                       </p>
                     </div>
                     <p className="font-medium">
@@ -112,8 +113,6 @@ const OrdersPage = () => {
                     </p>
                   </div>
                 ))}
-
-                {/* BUTTON đặt ngoài items */}
                 <Button
                   variant="outline"
                   onClick={() => setSelectedOrder(order)}
@@ -132,41 +131,30 @@ const OrdersPage = () => {
         >
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>
-                Chi tiết đơn hàng #{selectedOrder?.orderCode}
-              </DialogTitle>
+              <DialogTitle>Chi tiết đơn hàng #{selectedOrder?.id}</DialogTitle>
             </DialogHeader>
-
             {selectedOrder && (
               <div className="space-y-6 text-sm">
-                {/* ===== THÔNG TIN ĐƠN ===== */}
                 <div className="grid grid-cols-2 gap-4 border p-4 rounded-lg">
                   <div>
-                    <p className="font-medium">Người đặt hàng</p>
-                    <p>Họ và tên: {selectedOrder.customerName || "N/A"}</p>
-                    <p>Số điện thoại: {selectedOrder.customerPhone || "N/A"}</p>
+                    <p className="font-medium">Người nhận hàng</p>
+                    <p>Họ và tên: {selectedOrder.recipientName || "N/A"}</p>
+                    <p>Số điện thoại: {selectedOrder.phoneNumber || "N/A"}</p>
                   </div>
-
                   <div>
-                    <p className="font-medium">Người giao hàng</p>
-                    <p>Họ và tên: {selectedOrder.shipperName || "N/A"}</p>
-                    <p>Số điện thoại: {selectedOrder.shipperPhone || "N/A"}</p>
+                    <p className="font-medium">Ghi chú</p>
+                    <p>{selectedOrder.note || "—"}</p>
                   </div>
                 </div>
-
-                {/* ===== ĐỊA CHỈ ===== */}
                 <div className="border p-4 rounded-lg">
                   <p className="font-medium mb-1">Địa chỉ giao hàng</p>
                   <p>{selectedOrder.shippingAddress}</p>
                 </div>
-
-                {/* ===== THANH TOÁN ===== */}
                 <div className="border p-4 rounded-lg flex justify-between">
                   <div>
                     <p className="font-medium">Phương thức thanh toán</p>
                     <p>{selectedOrder.paymentMethod}</p>
                   </div>
-
                   <div>
                     <p className="font-medium">Trạng thái</p>
                     <Badge className={getStatusColor(selectedOrder.status)}>
@@ -174,33 +162,30 @@ const OrdersPage = () => {
                     </Badge>
                   </div>
                 </div>
-
-                {/* ===== DANH SÁCH SẢN PHẨM ===== */}
                 <div className="space-y-3">
                   {selectedOrder.items.map((item, idx) => (
                     <div key={idx} className="flex gap-4 border p-3 rounded">
                       <img
-                        src={item.mainImageUrl ?? "/product-placeholder.svg"}
+                        src={item.variantImage ?? "/product-placeholder.svg"}
                         className="w-16 h-16 rounded object-cover"
                         alt={item.productName}
                       />
                       <div className="flex-1">
                         <p className="font-medium">{item.productName}</p>
                         <p className="text-gray-500">
-                          {item.variantDetails} × {item.quantity}
+                          {item.color} / {item.size} × {item.quantity}
                         </p>
                       </div>
                       <p className="font-semibold">
-                        {formatCurrency(item.price * item.quantity)}
+                        {formatCurrency(Number(item.price) * item.quantity)}
                       </p>
                     </div>
                   ))}
                 </div>
-
-                {/* ===== TOTAL ===== */}
                 <div className="flex justify-end border-t pt-4">
                   <p className="text-lg font-bold text-blue-600">
-                    Tổng tiền: {formatCurrency(Number(selectedOrder.totalFinalAmount))}
+                    Tổng tiền:{" "}
+                    {formatCurrency(Number(selectedOrder.totalAmount))}
                   </p>
                 </div>
               </div>

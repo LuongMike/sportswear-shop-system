@@ -12,6 +12,8 @@ export const MOCK_CREDENTIALS = {
 
 export const MOCK_USER: User = {
   _id: "mock-user-001",
+  id: 1,
+  fullName: "Nguyễn Văn Test",
   full_name: "Nguyễn Văn Test",
   email: "test@sportshop.vn",
   phone: "0901234567",

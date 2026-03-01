@@ -1,147 +1,100 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
-import ProductsAPI from "@/services/productsApi";
-import type { ProductDetailResponse } from "@/types/api";
+import { useState, useEffect, useMemo } from "react";
+import { ProductsAPI } from "@/services/productsApi";
 
 export const useProductDetail = (slug?: string) => {
-  // --- A. State Fetching Dữ liệu ---
-  const [product, setProduct] = useState<ProductDetailResponse | null>(null);
+  const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // --- B. State Lựa chọn của Người dùng (Selection State) ---
-  const [selectedColorId, setSelectedColorId] = useState<number | null>(null);
-  const [selectedSize, setSelectedSize] = useState<string | null>(null);
-  const [quantity, setQuantity] = useState(1);
+  // State cho màu và size
+  const [selectedColorId, setSelectedColorId] = useState<string | number>();
+  const [selectedSize, setSelectedSize] = useState<string>();
 
-  // 1. Logic Fetching Data
   useEffect(() => {
-    const fetchProduct = async () => {
-      if (!slug) {
-        setLoading(false);
-        return;
-      }
-      // Reset trạng thái lựa chọn khi load sản phẩm mới
-      setSelectedColorId(null);
-      setSelectedSize(null);
-      setQuantity(1);
-
+    const fetchDetail = async () => {
+      if (!slug) return;
       try {
         setLoading(true);
-        setError(null);
-        const data = await ProductsAPI.getProductDetailBySlug(slug);
-        setProduct(data);
-      } catch (err) {
-        console.error("Failed to fetch product:", err);
-        const { getFallbackProductDetail } = await import("@/data");
-        const fallback = getFallbackProductDetail(slug);
-        if (fallback) {
-          setProduct(fallback);
-          setError(null);
-        } else {
-          setError("Không thể tải thông tin sản phẩm");
+        const productId = slug.split("-").pop();
+        if (productId) {
+          const data = await ProductsAPI.getProductDetailById(productId);
+          setProduct({
+            ...data,
+            name: data.productName,
+            basePrice: data.price,
+            mainImageUrl: data.image_url,
+          });
         }
+      } catch (err) {
+        setError("Không thể tải sản phẩm");
       } finally {
         setLoading(false);
       }
     };
-
-    void fetchProduct();
+    fetchDetail();
   }, [slug]);
 
-  // 2. Logic Khởi tạo lựa chọn ban đầu (chọn Variant đầu tiên)
-  useEffect(() => {
-    if (product && product.variants.length > 0 && !selectedColorId) {
-      const firstVariant = product.variants[0];
-      setSelectedColorId(firstVariant.colorId);
-      setSelectedSize(firstVariant.sizeName);
-    }
-  }, [product, selectedColorId]);
-
-  // 3. Tính toán các Options duy nhất (Màu, Size)
+  // Tính toán options (colors, sizes)
   const options = useMemo(() => {
-    if (!product) return { colors: [], sizes: [] };
-
-    return {
-      colors: product.colors,
-      sizes: product.sizes,
-    };
+    if (!product?.variants) return { colors: [], sizes: [] };
+    const colors = Array.from(
+      new Map(
+        product.variants
+          .filter((v: any) => v.color)
+          .map((v: any) => [v.color, { id: v.color, name: v.color }]),
+      ).values(),
+    );
+    const sizes = Array.from(
+      new Set(product.variants.map((v: any) => v.size).filter(Boolean)),
+    );
+    return { colors, sizes };
   }, [product]);
 
-  // 4. Tìm Variant đang được chọn (Matching Variant)
+  // Tìm variant hiện tại
   const currentVariant = useMemo(() => {
-    if (!product || !selectedColorId || !selectedSize) return null;
-
-    return (
-      product.variants.find(
-        (v) => v.colorId === selectedColorId && v.sizeName === selectedSize
-      ) || null
+    if (!product?.variants) return undefined;
+    return product.variants.find(
+      (v: any) =>
+        (selectedColorId === undefined ||
+          v.color === selectedColorId ||
+          v.colorId === selectedColorId) &&
+        (selectedSize === undefined || v.size === selectedSize),
     );
   }, [product, selectedColorId, selectedSize]);
 
-  // 5. Logic Kiểm tra tính khả dụng của một Size khi đã chọn Màu
-  const isSizeAvailable = useCallback(
-    (sizeName: string) => {
-      if (!product || !selectedColorId) return true;
-
-      return product.variants.some(
-        (v) => v.colorId === selectedColorId && v.sizeName === sizeName
-      );
-    },
-    [product, selectedColorId]
-  );
-
-  // 6. Logic Kiểm tra tính khả dụng của một Màu khi đã chọn Size
-  const isColorAvailable = useCallback(
-    (colorId: number) => {
-      if (!product || !selectedSize) return true;
-
-      return product.variants.some(
-        (v) => v.colorId === colorId && v.sizeName === selectedSize
-      );
-    },
-    [product, selectedSize]
-  );
-
-  // 7. Giá, Tồn kho và Trạng thái
-  const displayPrice = currentVariant
-    ? Number(currentVariant.price)
-    : product
-    ? Number(product.basePrice)
-    : 0;
-  const currentStock = currentVariant?.stockQuantity ?? 0;
-  const isOutOfStock = currentStock === 0;
-
-  // 8. Handlers
-  const handleQuantityChange = (delta: number) => {
-    const newQuantity = quantity + delta;
-    if (newQuantity >= 1 && newQuantity <= currentStock) {
-      setQuantity(newQuantity);
-    }
+  // Kiểm tra size có còn hàng không
+  const isSizeAvailable = (size: string) => {
+    if (!product?.variants) return false;
+    return product.variants.some(
+      (v: any) =>
+        v.size === size &&
+        (selectedColorId === undefined ||
+          v.color === selectedColorId ||
+          v.colorId === selectedColorId) &&
+        v.stockQuantity > 0,
+    );
   };
 
+  // Số lượng tồn kho của variant hiện tại
+  const currentStock = currentVariant?.stockQuantity ?? 0;
+  const isOutOfStock = currentStock <= 0;
+
+  // Giá hiển thị
+  const displayPrice = currentVariant?.price ?? product?.basePrice ?? 0;
+
   return {
-    // Data Fetching
     product,
     loading,
     error,
-
-    // Selection & Availability
     options,
     selectedColorId,
+    setSelectedColorId,
     selectedSize,
-    quantity,
+    setSelectedSize,
     currentVariant,
-
-    // Calculated State
-    displayPrice,
+    isSizeAvailable,
     currentStock,
     isOutOfStock,
-
-    // Actions
-    setSelectedColorId,
-    setSelectedSize,
-    handleQuantityChange,
-    isSizeAvailable,
-    isColorAvailable,
+    displayPrice,
   };
 };

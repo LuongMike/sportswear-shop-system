@@ -7,18 +7,24 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useAuthStore } from "@/store/useAuthStore";
 
 interface AdminSidebarProps {
   activePrimary: "system" | "chat";
   setActivePrimary: (value: "system" | "chat") => void;
   unreadCount: number;
+  onLogout: () => void;
 }
 
 export function AdminSidebar({
   activePrimary,
   setActivePrimary,
   unreadCount,
+  onLogout,
 }: AdminSidebarProps) {
+  const { user } = useAuthStore();
+  const roleName = user?.roleName;
+  const isShipper = roleName === "Người giao hàng";
   return (
     <aside className="w-[70px] bg-slate-950 flex flex-col items-center py-6 gap-6 z-20 flex-none text-slate-50">
       {/* Logo */}
@@ -47,41 +53,44 @@ export function AdminSidebar({
         <TooltipContent side="right">Quản lý hệ thống</TooltipContent>
       </Tooltip>
 
-      {/* Nút Chat (kèm Badge) */}
-      <Tooltip delayDuration={0}>
-        <TooltipTrigger asChild>
-          <div className="relative">
-            <Button
-              variant={activePrimary === "chat" ? "secondary" : "ghost"}
-              size="icon"
-              className={`h-12 w-12 rounded-xl transition-all ${
-                activePrimary === "chat"
-                  ? "bg-blue-600 text-white hover:bg-blue-700"
-                  : "text-slate-400 hover:text-white hover:bg-slate-800"
-              }`}
-              onClick={() => setActivePrimary("chat")}
-            >
-              <MessageSquare className="w-6 h-6" />
-            </Button>
-            {/* Badge thông báo đỏ chót */}
-            {unreadCount > 0 && (
-              <Badge
-                variant="destructive"
-                className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 rounded-full border-2 border-slate-950"
+      {/* Nút Chat (kèm Badge) - chỉ Quản Trị Viên */}
+      {!isShipper && (
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>
+            <div className="relative">
+              <Button
+                variant={activePrimary === "chat" ? "secondary" : "ghost"}
+                size="icon"
+                className={`h-12 w-12 rounded-xl transition-all ${
+                  activePrimary === "chat"
+                    ? "bg-blue-600 text-white hover:bg-blue-700"
+                    : "text-slate-400 hover:text-white hover:bg-slate-800"
+                }`}
+                onClick={() => setActivePrimary("chat")}
               >
-                {unreadCount}
-              </Badge>
-            )}
-          </div>
-        </TooltipTrigger>
-        <TooltipContent side="right">Tin nhắn khách hàng</TooltipContent>
-      </Tooltip>
+                <MessageSquare className="w-6 h-6" />
+              </Button>
+              {/* Badge thông báo đỏ chót */}
+              {unreadCount > 0 && (
+                <Badge
+                  variant="destructive"
+                  className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 rounded-full border-2 border-slate-950"
+                >
+                  {unreadCount}
+                </Badge>
+              )}
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="right">Tin nhắn khách hàng</TooltipContent>
+        </Tooltip>
+      )}
 
       <div className="mt-auto flex flex-col gap-4">
         <Button
           variant="ghost"
           size="icon"
           className="h-12 w-12 rounded-xl text-slate-400 hover:text-red-400 hover:bg-slate-800"
+          onClick={onLogout}
         >
           <LogOut className="w-6 h-6" />
         </Button>

@@ -102,7 +102,7 @@ export function useAdminChat() {
           });
         }
       },
-      (err) => console.error("WS Error", err)
+      (err) => console.error("WS Error", err),
     );
 
     return () => {
@@ -121,20 +121,17 @@ export function useAdminChat() {
     // Update local state to remove unread dot
     setRooms((prev) =>
       prev.map((r) =>
-        r.id === selectedRoomId ? { ...r, hasUnread: false } : r
-      )
+        r.id === selectedRoomId ? { ...r, hasUnread: false } : r,
+      ),
     );
 
-    const fetchMessages = async () => {
-      try {
-        const res = await chatApi.getMessages(selectedRoomId);
-        setMessages(res.data);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-
-    fetchMessages();
+    // Lấy messages từ room đã load thay vì gọi API riêng (backend không có GET endpoint)
+    const selectedRoom = rooms.find(r => r.id === selectedRoomId) as any;
+    if (selectedRoom?.messages && Array.isArray(selectedRoom.messages)) {
+      setMessages(selectedRoom.messages);
+    } else {
+      setMessages([]);
+    }
 
     // Subscribe to room messages
     if (subscriptionRef.current) {
@@ -158,35 +155,20 @@ export function useAdminChat() {
     };
   }, [selectedRoomId, user?._id]);
 
-  const handleSend = () => {
-    if (!selectedRoomId) return;
+  // Sửa handleSend để gửi tin nhắn qua cả REST API và WebSocket
+  // Trong handleSend của useAdminChat.ts
+  const handleSend = async () => {
+    if (!selectedRoomId || !text.trim()) return;
 
-    if (text.trim().length > 0) {
-      const payload = {
-        content: text,
-        type: "TEXT",
-        sender: "ADMIN",
-      };
-      ws.sendMessage(selectedRoomId, payload);
+    try {
+      const payload = { content: text, type: "TEXT", sender: "ADMIN" };
+      // CHỈ gửi qua REST API. Backend sẽ tự gửi thông báo qua WebSocket cho Khách hàng.
+      await chatApi.sendMessage(selectedRoomId, payload);
       setText("");
-    }
 
-    if (pendingFile) {
-      chatApi
-        .uploadFile(pendingFile)
-        .then((res) => {
-          const fileUrl = res.data; // BE returns string url
-          const type = pendingFile.type.startsWith("image/") ? "IMAGE" : "FILE";
-          const payload = {
-            content: pendingFile.name,
-            type,
-            fileUrl,
-            sender: "ADMIN",
-          };
-          ws.sendMessage(selectedRoomId, payload);
-          setPendingFile(null);
-        })
-        .catch((err) => console.error("Upload error:", err));
+      // Load lại tin nhắn hoặc để WS subscription tự cập nhật
+    } catch (err) {
+      console.error("Gửi tin nhắn thất bại:", err);
     }
   };
 

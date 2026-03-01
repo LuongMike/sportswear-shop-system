@@ -33,7 +33,7 @@ export const colorApi = {
   update: async (id: number, data: UpdateColorDTO) => {
     const response = await api.put<ApiResponse<Color>>(
       `/api/colors/${id}`,
-      data
+      data,
     );
     return response.data;
   },
@@ -44,7 +44,4 @@ export const colorApi = {
   },
 };
 
-// Keep ColorAPI for backward compatibility if needed, or remove it if I'm sure.
-// Given the previous context, I'll alias it or just replace it.
-// The previous file content was small, so I'll just replace the whole thing.
 export const ColorAPI = colorApi;

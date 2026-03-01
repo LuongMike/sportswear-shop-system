@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -46,9 +46,14 @@ const LoginPage = () => {
     }
   };
 
-  // Nếu đã đăng nhập, redirect về trang chủ
+  // Nếu đã đăng nhập, redirect về trang chủ (trong useEffect để tránh gọi navigate khi render)
+  useEffect(() => {
+    if (user) {
+      navigate("/", { replace: true });
+    }
+  }, [user, navigate]);
+
   if (user) {
-    navigate("/", { replace: true });
     return null;
   }
 

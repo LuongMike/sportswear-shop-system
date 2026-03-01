@@ -10,6 +10,7 @@ import React, { useEffect } from "react";
 import { Link } from "react-router";
 import { useCartStore } from "@/store/useCartStore";
 import { formatCurrency } from "@/lib/utils";
+import { Sheet as SheetUI } from "@/components/ui/sheet";
 
 const CartSheet = () => {
   const {
@@ -31,7 +32,7 @@ const CartSheet = () => {
   const isUpdating = (itemId: number) => updatingItems.includes(itemId);
 
   return (
-    <Sheet>
+    <SheetUI>
       <SheetTrigger asChild>
         <button className="p-2 hover:bg-gray-100 rounded-full transition-colors relative">
           <ShoppingBag className="h-5 w-5 text-gray-700" />
@@ -60,76 +61,82 @@ const CartSheet = () => {
             </div>
           ) : (
             <div className="space-y-6">
-              {cart?.items.map((item) => (
-                <div key={item.itemId} className="flex gap-4">
-                  {/* Image */}
-                  <div className="w-24 h-24 flex-shrink-0 border border-gray-100 rounded-md overflow-hidden">
-                    <img
-                      src={item.variant.image}
-                      alt={item.product.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 flex flex-col justify-between">
-                    <div>
-                      <div className="text-xs font-bold text-blue-600 uppercase mb-1">
-                        {item.product.brandName}
-                      </div>
-                      <h3 className="text-sm font-medium text-gray-900 line-clamp-2 mb-1">
-                        {item.product.name}
-                      </h3>
-                      <div className="text-sm text-gray-500 mb-2">
-                        {item.variant.color?.name} / {item.variant.size?.name}
-                      </div>
-                      <div className="font-bold text-gray-900">
-                        {formatCurrency(Number(item.variant.price))}
-                      </div>
+              {cart?.items.map((item) => {
+                const itemId = item.itemId ?? item.id ?? item.productId;
+                return (
+                  <div key={itemId} className="flex gap-4">
+                    {/* Image */}
+                    <div className="w-24 h-24 flex-shrink-0 border border-gray-100 rounded-md overflow-hidden">
+                      <img
+                        src={item?.imageUrl ?? item.product?.mainImageUrl ?? ""}
+                        alt={item.product?.name ?? item.productName}
+                        className="w-full h-full object-cover"
+                      />
                     </div>
 
-                    <div className="flex items-center justify-between mt-2">
-                      <div className="flex items-center border border-gray-300 rounded-sm h-8">
-                        <button
-                          onClick={() =>
-                            updateQuantity(item.itemId, item.quantity - 1)
-                          }
-                          className="px-2 h-full hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                          disabled={
-                            item.quantity <= 1 || isUpdating(item.itemId)
-                          }
-                        >
-                          <Minus className="w-3 h-3" />
-                        </button>
-                        <span className="w-8 text-center text-sm font-medium">
-                          {isUpdating(item.itemId) ? (
-                            <span className="inline-block w-3 h-3 border-2 border-gray-300 border-t-black rounded-full animate-spin"></span>
-                          ) : (
-                            item.quantity
+                    {/* Info */}
+                    <div className="flex-1 flex flex-col justify-between">
+                      <div>
+                        {item.product?.brandName && (
+                          <div className="text-xs font-bold text-blue-600 uppercase mb-1">
+                            {item.product.brandName}
+                          </div>
+                        )}
+                        <h3 className="text-sm font-medium text-gray-900 line-clamp-2 mb-1">
+                          {item.product?.name ?? item.productName}
+                        </h3>
+                        <div className="text-sm text-gray-500 mb-2">
+                          {item.variant?.color?.name ?? ""} /{" "}
+                          {item.variant?.size?.name ?? ""}
+                        </div>
+                        <div className="font-bold text-gray-900">
+                          {formatCurrency(
+                            Number(item.variant?.price ?? item.price),
                           )}
-                        </span>
-                        <button
-                          onClick={() =>
-                            updateQuantity(item.itemId, item.quantity + 1)
-                          }
-                          className="px-2 h-full hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                          disabled={isUpdating(item.itemId)}
-                        >
-                          <Plus className="w-3 h-3" />
-                        </button>
+                        </div>
                       </div>
 
-                      <button
-                        onClick={() => removeItem(item.itemId)}
-                        className="text-sm text-red-500 underline hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={isUpdating(item.itemId)}
-                      >
-                        Xóa
-                      </button>
+                      <div className="flex items-center justify-between mt-2">
+                        <div className="flex items-center border border-gray-300 rounded-sm h-8">
+                          <button
+                            onClick={() =>
+                              updateQuantity(itemId, item.quantity - 1)
+                            }
+                            className="px-2 h-full hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={item.quantity <= 1 || isUpdating(itemId)}
+                          >
+                            <Minus className="w-3 h-3" />
+                          </button>
+                          <span className="w-8 text-center text-sm font-medium">
+                            {isUpdating(itemId) ? (
+                              <span className="inline-block w-3 h-3 border-2 border-gray-300 border-t-black rounded-full animate-spin"></span>
+                            ) : (
+                              item.quantity
+                            )}
+                          </span>
+                          <button
+                            onClick={() =>
+                              updateQuantity(itemId, item.quantity + 1)
+                            }
+                            className="px-2 h-full hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={isUpdating(itemId)}
+                          >
+                            <Plus className="w-3 h-3" />
+                          </button>
+                        </div>
+
+                        <button
+                          onClick={() => removeItem(itemId)}
+                          className="text-sm text-red-500 underline hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                          disabled={isUpdating(itemId)}
+                        >
+                          Xóa
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -153,7 +160,7 @@ const CartSheet = () => {
           </div>
         )}
       </SheetContent>
-    </Sheet>
+    </SheetUI>
   );
 };
 

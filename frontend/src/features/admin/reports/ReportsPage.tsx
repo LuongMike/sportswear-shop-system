@@ -1,392 +1,376 @@
-import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
-import { OrderAPI, type Order } from "@/services/orderApi";
+import { TrendingUp, ShoppingCart, Users, Clock, DollarSign } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatCurrency } from "@/utils/formatCurrency";
-import { MOCK_ADMIN_ORDERS } from "@/data/mockAdminOrders";
+import React from "react";
+import api from "@/lib/axios";
 
-function toNumber(value: unknown): number {
-  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
-  if (typeof value === "string") {
-    // keep digits, dot, comma, minus
-    const cleaned = value.replace(/[^\d,.-]/g, "").replace(/,/g, ".");
-    const n = Number(cleaned);
-    return Number.isFinite(n) ? n : 0;
-  }
-  return 0;
+function formatStartDateInput(date: Date) {
+  // yyyy-MM-ddT00:00:00
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}T00:00:00`;
 }
 
-function formatDayLabel(date: Date): string {
-  return date.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
+function formatEndDateInput(date: Date) {
+  // yyyy-MM-ddT23:59:59
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}T23:59:59`;
 }
-
-function dayKey(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
-
-function getOrderDayKey(orderDate: string): string {
-  const d = new Date(orderDate);
-  if (Number.isNaN(d.getTime())) return "invalid";
-  return dayKey(d);
-}
-
-function getStatusLabel(status: string): string {
-  switch (status) {
-    case "PENDING":
-      return "Chờ xử lý";
-    case "PROCESSING":
-      return "Đang xử lý";
-    case "SHIPPING":
-      return "Đang giao";
-    case "COMPLETED":
-      return "Hoàn tất";
-    case "CANCELLED":
-      return "Đã hủy";
-    default:
-      return status || "N/A";
-  }
-}
-
-function getStatusBadgeClass(status: string): string {
-  switch (status) {
-    case "PENDING":
-      return "bg-yellow-100 text-yellow-800";
-    case "PROCESSING":
-      return "bg-blue-100 text-blue-800";
-    case "SHIPPING":
-      return "bg-purple-100 text-purple-800";
-    case "COMPLETED":
-      return "bg-green-100 text-green-800";
-    case "CANCELLED":
-      return "bg-red-100 text-red-800";
-    default:
-      return "bg-gray-100 text-gray-800";
-  }
+// Định nghĩa kiểu dữ liệu trả về từ API
+interface DashboardReport {
+  totalRevenue: number;
+  totalOrders: number;
+  newUsers: number;
+  pendingOrders: number;
 }
 
 export function ReportsPage() {
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ["admin-reports", "orders"],
-    queryFn: () => OrderAPI.getOrders(1, 500),
-    retry: 1,
-  });
 
-  // Nếu API lỗi -> dùng dữ liệu mock; nếu thành công -> dùng dữ liệu thật
-  const hasApiData = !!data && Array.isArray((data as any).orders);
-  const orders: Order[] = hasApiData ? (data as any).orders : MOCK_ADMIN_ORDERS;
-
-  const computed = useMemo(() => {
-    const totalOrders = orders.length;
-
-    let grossValue = 0;
-    let completedRevenue = 0;
-    const statusCounts = new Map<string, number>();
-
-    const productAgg = new Map<
-      string,
-      { productName: string; qty: number; sales: number }
-    >();
-
-    for (const o of orders) {
-      const orderValue = toNumber(o.totalFinalAmount);
-      grossValue += orderValue;
-
-      const s = o.status || "UNKNOWN";
-      statusCounts.set(s, (statusCounts.get(s) ?? 0) + 1);
-
-      if (s === "COMPLETED") {
-        completedRevenue += orderValue;
-      }
-
-      for (const item of o.items ?? []) {
-        const name = item.productName || "N/A";
-        const qty = Number(item.quantity) || 0;
-        const price = toNumber(item.price);
-        const sales = qty * price;
-
-        const current = productAgg.get(name) ?? {
-          productName: name,
-          qty: 0,
-          sales: 0,
-        };
-        current.qty += qty;
-        current.sales += sales;
-        productAgg.set(name, current);
-      }
+  function getAccessToken() {
+    const authStorage = localStorage.getItem("auth-storage");
+    if (!authStorage) return null;
+    try {
+      const parsed = JSON.parse(authStorage);
+      return parsed.state?.accessToken || null;
+    } catch {
+      return null;
     }
-
-    const averageOrderValue = totalOrders > 0 ? grossValue / totalOrders : 0;
-
-    const topProducts = Array.from(productAgg.values())
-      .sort((a, b) => b.qty - a.qty)
-      .slice(0, 8);
-
-    const today = new Date();
-    const last7Days = Array.from({ length: 7 }, (_, idx) => {
-      const d = new Date(today);
-      d.setDate(today.getDate() - (6 - idx));
-      return d;
-    });
-
-    const revenueByDay = new Map<string, number>();
-    for (const o of orders) {
-      if (o.status !== "COMPLETED") continue;
-      const k = getOrderDayKey(o.orderDate);
-      revenueByDay.set(k, (revenueByDay.get(k) ?? 0) + toNumber(o.totalFinalAmount));
-    }
-
-    const chart = last7Days.map((d) => {
-      const k = dayKey(d);
-      return { key: k, label: formatDayLabel(d), value: revenueByDay.get(k) ?? 0 };
-    });
-    const chartMax = Math.max(0, ...chart.map((c) => c.value));
-
-    const statusRows = Array.from(statusCounts.entries())
-      .map(([status, count]) => ({
-        status,
-        label: getStatusLabel(status),
-        count,
-        percent: totalOrders > 0 ? (count / totalOrders) * 100 : 0,
-      }))
-      .sort((a, b) => b.count - a.count);
-
-    return {
-      totalOrders,
-      grossValue,
-      completedRevenue,
-      averageOrderValue,
-      topProducts,
-      chart,
-      chartMax,
-      statusRows,
-    };
-  }, [orders]);
-
-  if (isLoading) {
-    return (
-      <div className="h-[60vh] flex items-center justify-center text-muted-foreground">
-        <Loader2 className="w-6 h-6 animate-spin mr-2" />
-        Đang tải báo cáo...
-      </div>
-    );
   }
+  // State ngày
+  const today = new Date();
+  const [startDate, setStartDate] = React.useState(formatStartDateInput(today));
+  const [endDate, setEndDate] = React.useState(formatEndDateInput(today));
+
+  const { data, isError, refetch, isFetching } =
+    useQuery<DashboardReport>({
+      queryKey: ["admin-reports-simple", startDate, endDate],
+      queryFn: async () => {
+        const params = new URLSearchParams({
+          startDate: startDate,
+          endDate: endDate,
+        });
+
+        const bearToken = getAccessToken();
+
+        const res = await api.get(`/api/admin/reports/dashboard?${params}`, {
+          headers: {
+            Authorization: `Bearer ${bearToken}`,
+          },
+        });
+        console.log(res);
+        
+        if (res.status !== 200) throw new Error("API error");
+
+        return res?.data;
+      },
+      retry: 1,
+    });
+
+  const totalRevenue = data?.totalRevenue ?? 0;
+  const totalOrders = data?.totalOrders ?? 0;
+  const newUsers = data?.newUsers ?? 0;
+  const pendingOrders = data?.pendingOrders ?? 0;
+
+  console.log("Data: ", data);
+  
 
   return (
     <div className="space-y-6 p-6 w-full max-w-none">
-    <div className="grid gap-4">
       <div className="flex items-end justify-between gap-3 flex-wrap">
         <div className="space-y-1">
-          <h2 className="text-2xl font-bold tracking-tight">Báo cáo thống kê</h2>
+          <h2 className="text-2xl font-bold tracking-tight">
+            Báo cáo thống kê
+          </h2>
           <p className="text-sm text-muted-foreground">
-            Tổng hợp nhanh theo đơn hàng (tối đa 500 đơn gần nhất).
+            Tổng hợp nhanh các chỉ số chính.
           </p>
         </div>
         {isError && (
           <Badge variant="outline" className="text-xs px-3 py-1 border-dashed">
-            Đang hiển thị dữ liệu demo (API lỗi)
+            Đang hiển thị dữ liệu mặc định (API lỗi)
           </Badge>
         )}
       </div>
-
+      {/* Bộ lọc ngày */}
+      <form
+        className="flex gap-4 items-center mb-4 flex-wrap"
+        onSubmit={(e) => {
+          e.preventDefault();
+          refetch();
+        }}
+      >
+        <label className="flex items-center gap-2 text-sm">
+          Từ ngày:
+          <input
+            type="date"
+            value={startDate.slice(0, 10)}
+            onChange={(e) => setStartDate(e.target.value + "T00:00:00")}
+            className="border rounded px-2 py-1"
+            max={endDate.slice(0, 10)}
+          />
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          Đến ngày:
+          <input
+            type="date"
+            value={endDate.slice(0, 10)}
+            onChange={(e) => setEndDate(e.target.value + "T00:00:00")}
+            className="border rounded px-2 py-1"
+            min={startDate.slice(0, 10)}
+          />
+        </label>
+        <button
+          type="submit"
+          className="px-4 py-2 rounded bg-blue-600 text-white font-semibold hover:bg-blue-700 transition"
+          disabled={isFetching}
+        >
+          {isFetching ? "Đang tải..." : "Xem báo cáo"}
+        </button>
+      </form>
+      {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="py-0">
-          <CardHeader className="pb-2">
+        <Card className="py-0 border-l-4 border-l-green-500">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <CardTitle className="text-sm text-muted-foreground">
-              Doanh thu (Hoàn tất)
+              Doanh thu
             </CardTitle>
+            <DollarSign className="h-5 w-5 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {formatCurrency(computed.completedRevenue)}
+            <div className="text-2xl font-bold text-green-600">
+              {totalRevenue.toLocaleString("vi-VN")}₫
             </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Trong khoảng thời gian đã chọn
+            </p>
           </CardContent>
         </Card>
-
-        <Card className="py-0">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">
-              Tổng giá trị đơn
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {formatCurrency(computed.grossValue)}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="py-0">
-          <CardHeader className="pb-2">
+        <Card className="py-0 border-l-4 border-l-blue-500">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <CardTitle className="text-sm text-muted-foreground">
               Tổng đơn hàng
             </CardTitle>
+            <ShoppingCart className="h-5 w-5 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{computed.totalOrders}</div>
+            <div className="text-2xl font-bold text-blue-600">{totalOrders}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Đơn hàng đã tạo
+            </p>
           </CardContent>
         </Card>
-
-        <Card className="py-0">
-          <CardHeader className="pb-2">
+        <Card className="py-0 border-l-4 border-l-purple-500">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <CardTitle className="text-sm text-muted-foreground">
-              Giá trị TB/đơn
+              Người dùng mới
+            </CardTitle>
+            <Users className="h-5 w-5 text-purple-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-600">{newUsers}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Đăng ký mới
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="py-0 border-l-4 border-l-orange-500">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between">
+            <CardTitle className="text-sm text-muted-foreground">
+              Đơn chờ xử lý
+            </CardTitle>
+            <Clock className="h-5 w-5 text-orange-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">{pendingOrders}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Cần xử lý
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Charts Section */}
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Bar Chart - Thống kê tổng quan */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              Biểu đồ tổng quan
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {formatCurrency(computed.averageOrderValue)}
+            <div className="space-y-4">
+              {/* Doanh thu bar */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Doanh thu</span>
+                  <span className="font-medium">{totalRevenue.toLocaleString("vi-VN")}₫</span>
+                </div>
+                <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-green-400 to-green-600 rounded-full transition-all duration-1000"
+                    style={{ width: totalRevenue > 0 ? '100%' : '0%' }}
+                  />
+                </div>
+              </div>
+
+              {/* Đơn hàng bar */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Đơn hàng</span>
+                  <span className="font-medium">{totalOrders} đơn</span>
+                </div>
+                <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-blue-400 to-blue-600 rounded-full transition-all duration-1000"
+                    style={{ width: totalOrders > 0 ? `${Math.min((totalOrders / Math.max(totalOrders, 100)) * 100, 100)}%` : '0%' }}
+                  />
+                </div>
+              </div>
+
+              {/* Người dùng mới bar */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Người dùng mới</span>
+                  <span className="font-medium">{newUsers} người</span>
+                </div>
+                <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-purple-400 to-purple-600 rounded-full transition-all duration-1000"
+                    style={{ width: newUsers > 0 ? `${Math.min((newUsers / Math.max(newUsers, 50)) * 100, 100)}%` : '0%' }}
+                  />
+                </div>
+              </div>
+
+              {/* Đơn chờ xử lý bar */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Đơn chờ xử lý</span>
+                  <span className="font-medium">{pendingOrders} đơn</span>
+                </div>
+                <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-orange-400 to-orange-600 rounded-full transition-all duration-1000"
+                    style={{ width: pendingOrders > 0 ? `${Math.min((pendingOrders / Math.max(totalOrders, 1)) * 100, 100)}%` : '0%' }}
+                  />
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
-      </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2 py-0">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Doanh thu 7 ngày gần nhất</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Tính theo các đơn có trạng thái <span className="font-medium">COMPLETED</span>.
-            </p>
+        {/* Pie Chart - Tỷ lệ đơn hàng */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5" />
+              Tỷ lệ đơn hàng
+            </CardTitle>
           </CardHeader>
-          <CardContent className="pb-6">
-            <div className="h-44 flex items-end gap-2">
-              {computed.chart.map((c) => {
-                const pct =
-                  computed.chartMax > 0 ? Math.round((c.value / computed.chartMax) * 100) : 0;
-                return (
-                  <div key={c.key} className="flex-1 min-w-0">
-                    <div className="h-36 flex items-end">
-                      <div
-                        className="w-full rounded-md bg-blue-600/80 hover:bg-blue-600 transition-colors"
-                        style={{ height: `${Math.max(4, pct)}%` }}
-                        title={`${c.label}: ${formatCurrency(c.value)}`}
-                      />
-                    </div>
-                    <div className="mt-2 text-[11px] text-muted-foreground text-center truncate">
-                      {c.label}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+          <CardContent>
+            <div className="flex items-center justify-center gap-8">
+              {/* Circular Progress */}
+              <div className="relative w-40 h-40">
+                <svg className="w-full h-full transform -rotate-90">
+                  <circle
+                    cx="80"
+                    cy="80"
+                    r="70"
+                    stroke="#e2e8f0"
+                    strokeWidth="12"
+                    fill="none"
+                  />
+                  {/* Đơn đã xử lý (xanh) */}
+                  <circle
+                    cx="80"
+                    cy="80"
+                    r="70"
+                    stroke="#22c55e"
+                    strokeWidth="12"
+                    fill="none"
+                    strokeDasharray={`${((totalOrders - pendingOrders) / Math.max(totalOrders, 1)) * 440} 440`}
+                    className="transition-all duration-1000"
+                  />
+                  {/* Đơn chờ xử lý (cam) */}
+                  <circle
+                    cx="80"
+                    cy="80"
+                    r="70"
+                    stroke="#f97316"
+                    strokeWidth="12"
+                    fill="none"
+                    strokeDasharray={`${(pendingOrders / Math.max(totalOrders, 1)) * 440} 440`}
+                    strokeDashoffset={`-${((totalOrders - pendingOrders) / Math.max(totalOrders, 1)) * 440}`}
+                    className="transition-all duration-1000"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-3xl font-bold">{totalOrders}</span>
+                  <span className="text-xs text-muted-foreground">Tổng đơn</span>
+                </div>
+              </div>
 
-        <Card className="py-0">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Trạng thái đơn hàng</CardTitle>
-          </CardHeader>
-          <CardContent className="pb-6 space-y-3">
-            {computed.statusRows.length === 0 ? (
-              <div className="text-sm text-muted-foreground">Chưa có dữ liệu.</div>
-            ) : (
-              computed.statusRows.map((row) => (
-                <div key={row.status} className="space-y-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Badge className={getStatusBadgeClass(row.status)}>
-                        {row.label}
-                      </Badge>
-                      <span className="text-sm text-muted-foreground truncate">
-                        {row.count} đơn
-                      </span>
-                    </div>
-                    <span className="text-sm font-medium tabular-nums">
-                      {Math.round(row.percent)}%
-                    </span>
-                  </div>
-                  <div className="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-800">
-                    <div
-                      className="h-full rounded-full bg-blue-600"
-                      style={{ width: `${row.percent}%` }}
-                    />
+              {/* Legend */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-green-500" />
+                  <div>
+                    <p className="text-sm font-medium">Đã xử lý</p>
+                    <p className="text-lg font-bold text-green-600">{totalOrders - pendingOrders}</p>
                   </div>
                 </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="py-0">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Top sản phẩm bán chạy</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Theo tổng số lượng trong các đơn đã lấy được.
-            </p>
-          </CardHeader>
-          <CardContent className="pb-6">
-            {computed.topProducts.length === 0 ? (
-              <div className="text-sm text-muted-foreground">Chưa có dữ liệu.</div>
-            ) : (
-              <div className="overflow-auto rounded-lg border">
-                <table className="w-full text-sm">
-                  <thead className="bg-slate-50 dark:bg-slate-950">
-                    <tr className="text-left">
-                      <th className="p-3 font-medium">Sản phẩm</th>
-                      <th className="p-3 font-medium text-right">SL</th>
-                      <th className="p-3 font-medium text-right">Doanh số</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {computed.topProducts.slice(0, 5).map((p) => (
-                      <tr key={p.productName} className="border-t">
-                        <td className="p-3">{p.productName}</td>
-                        <td className="p-3 text-right tabular-nums">{p.qty}</td>
-                        <td className="p-3 text-right tabular-nums">
-                          {formatCurrency(p.sales)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="py-0">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Đơn hàng gần đây</CardTitle>
-          </CardHeader>
-          <CardContent className="pb-6">
-            {orders.length === 0 ? (
-              <div className="text-sm text-muted-foreground">Chưa có dữ liệu.</div>
-            ) : (
-              <div className="space-y-2">
-                {orders.slice(0, 5).map((o) => (
-                  <div
-                    key={o.orderId}
-                    className="flex items-center justify-between gap-3 rounded-lg border bg-background p-3"
-                  >
-                    <div className="min-w-0">
-                      <div className="font-medium truncate">#{o.orderCode}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {new Date(o.orderDate).toLocaleString("vi-VN")}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 flex-none">
-                      <Badge className={getStatusBadgeClass(o.status)}>
-                        {getStatusLabel(o.status)}
-                      </Badge>
-                      <div className="text-sm font-semibold tabular-nums">
-                        {formatCurrency(toNumber(o.totalFinalAmount))}
-                      </div>
-                    </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-orange-500" />
+                  <div>
+                    <p className="text-sm font-medium">Chờ xử lý</p>
+                    <p className="text-lg font-bold text-orange-600">{pendingOrders}</p>
                   </div>
-                ))}
+                </div>
+                <div className="pt-2 border-t">
+                  <p className="text-xs text-muted-foreground">
+                    Tỷ lệ hoàn thành: {totalOrders > 0 ? Math.round(((totalOrders - pendingOrders) / totalOrders) * 100) : 0}%
+                  </p>
+                </div>
               </div>
-            )}
+            </div>
           </CardContent>
         </Card>
       </div>
-    </div>
+
+      {/* Summary Card */}
+      <Card className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+        <CardContent className="py-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-semibold">Tóm tắt báo cáo</h3>
+              <p className="text-blue-100 text-sm">
+                Từ {startDate.slice(0, 10)} đến {endDate.slice(0, 10)}
+              </p>
+            </div>
+            <div className="flex gap-8 flex-wrap">
+              <div className="text-center">
+                <p className="text-3xl font-bold">{totalRevenue.toLocaleString("vi-VN")}₫</p>
+                <p className="text-blue-100 text-sm">Doanh thu</p>
+              </div>
+              <div className="text-center">
+                <p className="text-3xl font-bold">{totalOrders}</p>
+                <p className="text-blue-100 text-sm">Đơn hàng</p>
+              </div>
+              <div className="text-center">
+                <p className="text-3xl font-bold">
+                  {totalOrders > 0 ? Math.round(totalRevenue / totalOrders).toLocaleString("vi-VN") : 0}₫
+                </p>
+                <p className="text-blue-100 text-sm">Giá trị TB/đơn</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

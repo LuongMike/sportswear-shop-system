@@ -1,10 +1,8 @@
 import {
   LayoutDashboard,
-  //   Settings,
   Users,
   Package,
   ShoppingBag,
-  BarChart3,
   Tag,
   Dumbbell,
   Palette,
@@ -17,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ChatRoomList } from "@/features/admin/chat/components/ChatRoomList";
 import { Separator } from "@/components/ui/separator";
+import { useAuthStore } from "@/store/useAuthStore";
 
 // --- DỮ LIỆU MENU ---
 const SYSTEM_MENU = [
@@ -24,11 +23,6 @@ const SYSTEM_MENU = [
     id: "dashboard",
     label: "Dashboard",
     icon: <LayoutDashboard className="w-5 h-5" />,
-  },
-  {
-    id: "reports",
-    label: "Báo cáo thống kê",
-    icon: <BarChart3 className="w-5 h-5" />,
   },
   {
     id: "orders",
@@ -82,6 +76,15 @@ export function AdminSecondarySidebar({
   selectedRoomId,
   onSelectRoom,
 }: AdminSecondarySidebarProps) {
+  const { user } = useAuthStore();
+  const roleName = user?.roleName;
+  const isShipper = roleName === "Người giao hàng";
+
+  const systemMenu = isShipper
+    ? SYSTEM_MENU.filter((item) => item.id === "orders")
+    : SYSTEM_MENU;
+  const catalogMenu = isShipper ? [] : CATALOG_MENU;
+
   return (
     <aside className="w-80 bg-background border-r flex flex-col flex-none transition-all duration-300">
       {/* Header Cột B */}
@@ -98,7 +101,7 @@ export function AdminSecondarySidebar({
           {activePrimary === "system" && (
             <>
               <div className="space-y-1">
-                {SYSTEM_MENU.map((item) => (
+                {systemMenu.map((item) => (
                   <Button
                     key={item.id}
                     variant={selectedMenu === item.id ? "secondary" : "ghost"}
@@ -116,27 +119,33 @@ export function AdminSecondarySidebar({
               </div>
 
               <Separator className="my-4" />
-              <div className="px-2 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Danh mục (Catalog)
-              </div>
+              {catalogMenu.length > 0 && (
+                <>
+                  <div className="px-2 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Danh mục (Catalog)
+                  </div>
 
-              <div className="space-y-1">
-                {CATALOG_MENU.map((item) => (
-                  <Button
-                    key={item.id}
-                    variant={selectedMenu === item.id ? "secondary" : "ghost"}
-                    className={`w-full justify-start gap-3 h-12 text-base ${
-                      selectedMenu === item.id
-                        ? "bg-slate-100 dark:bg-slate-800 font-medium"
-                        : "text-slate-500"
-                    }`}
-                    onClick={() => setSelectedMenu(item.id)}
-                  >
-                    {item.icon}
-                    {item.label}
-                  </Button>
-                ))}
-              </div>
+                  <div className="space-y-1">
+                    {catalogMenu.map((item) => (
+                      <Button
+                        key={item.id}
+                        variant={
+                          selectedMenu === item.id ? "secondary" : "ghost"
+                        }
+                        className={`w-full justify-start gap-3 h-12 text-base ${
+                          selectedMenu === item.id
+                            ? "bg-slate-100 dark:bg-slate-800 font-medium"
+                            : "text-slate-500"
+                        }`}
+                        onClick={() => setSelectedMenu(item.id)}
+                      >
+                        {item.icon}
+                        {item.label}
+                      </Button>
+                    ))}
+                  </div>
+                </>
+              )}
             </>
           )}
 

@@ -27,5 +27,7 @@ public class UserRequest {
     private String password;
 
     private String confirmPassword;
-    private String rollCode;
+
+    @NotBlank(message = "Quyền hạn (Role) là bắt buộc")
+    private String roleCode;
 }

@@ -1,20 +1,40 @@
-import { Badge } from "@/components/ui/badge";
-import type { ProductBadge } from "@/types/api";
+// components/ui/ProductCard.tsx
 import { Link } from "react-router";
+
+// Map tên màu sang mã hex
+const COLOR_MAP: Record<string, string> = {
+  "Đen": "#222222",
+  "Trắng": "#FFFFFF",
+  "Xám": "#888888",
+  "Xanh": "#2196F3",
+  "Xanh dương": "#1E88E5",
+  "Xanh lá": "#4CAF50",
+  "Đỏ": "#E53935",
+  "Vàng": "#FFC107",
+  "Nâu": "#795548",
+  "Hồng": "#E91E63",
+  "Cam": "#FF9800",
+  "Tím": "#9C27B0",
+  "Be": "#D7CCC8",
+  "Navy": "#1A237E",
+  "Bạc": "#C0C0C0",
+};
+
+export interface ColorInfo {
+  name: string;
+  hex?: string;
+  image?: string;
+}
 
 interface ProductCardProps {
   name: string;
   image: string;
   originalPrice: string | number;
   salePrice?: string | number;
-  badge?: ProductBadge;
-  rating?: number;
-  // reviews?: number;
-  colors?: string[];
   brand: string;
-  className?: string;
   slug?: string;
-  breadcrumb?: { label: string; href: string }[]; // Thêm prop breadcrumb
+  breadcrumb?: { label: string; href: string }[];
+  colors?: ColorInfo[];
 }
 
 const ProductCard = ({
@@ -22,134 +42,89 @@ const ProductCard = ({
   image,
   originalPrice,
   salePrice,
-  badge,
-  // rating,
-  // reviews,
-  colors,
   brand,
-  className = "",
   slug,
   breadcrumb,
+  colors = [],
 }: ProductCardProps) => {
-  // const renderStars = (rating: number) => {
-  //   const fullStars = Math.floor(rating);
-  //   const hasHalfStar = rating % 1 !== 0;
-
-  //   return (
-  //     <div className="flex items-center text-yellow-400">
-  //       {[...Array(fullStars)].map((_, i) => (
-  //         <span key={i} className="text-sm">
-  //           ★
-  //         </span>
-  //       ))}
-  //       {hasHalfStar && <span className="text-sm">☆</span>}
-  //     </div>
-  //   );
-  // };
-
-  const renderColorOptions = (colors: string[]) => (
-    <div className="flex gap-1 mt-2">
-      {colors.map((color, index) => (
-        <div
-          key={index}
-          className="w-3 h-3 rounded-full border border-gray-300 cursor-pointer hover:scale-110 transition-transform"
-          style={{
-            backgroundColor:
-              color === "black" ? "#000" : color === "gray" ? "#6B7280" : color,
-          }}
-        />
-      ))}
-    </div>
-  );
-
-  const formatPrice = (price: string | number | undefined) => {
-    if (price === undefined || price === null) return "";
-    const numericPrice = Number(price);
-    if (!isNaN(numericPrice)) {
-      return new Intl.NumberFormat("vi-VN", {
-        style: "currency",
-        currency: "VND",
-      }).format(numericPrice);
-    }
-    return price.toString();
+  const formatPrice = (price: string | number) => {
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(Number(price));
   };
 
-  const CardContent = (
-    <div
-      className={`group bg-white rounded-lg overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer ${className}`}
-    >
-      <div className="relative overflow-hidden">
+  // Lấy tối đa 5 màu để hiển thị
+  const displayColors = colors.slice(0, 5);
+  const remainingColors = colors.length - 5;
+
+  const content = (
+    <div className="bg-white rounded-xl border border-gray-100 p-3 hover:shadow-xl transition-all duration-300 h-full flex flex-col">
+      <div className="relative aspect-square overflow-hidden rounded-lg mb-3">
         <img
-          src={image}
+          src={image || "https://placehold.co/600x600?text=No+Image"}
           alt={name}
-          className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
-
-        {/* Badge */}
-        {badge && (
-          <Badge
-            className="absolute top-3 right-3 text-white font-bold"
-            style={{ backgroundColor: badge.display_color }}
-          >
-            {badge.display_text}
-          </Badge>
-        )}
       </div>
-
-      <div className="p-4">
-        {/* Brand */}
-        <p className="text-xs text-gray-500 uppercase tracking-wider mb-1 font-medium">
+      <div className="flex-1 flex flex-col">
+        <p className="text-[10px] text-gray-400 uppercase font-bold mb-1">
           {brand}
         </p>
-
-        {/* Product Name */}
-        <h3 className="text-sm font-medium text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
+        <h3 className="text-sm font-semibold text-gray-800 mb-2 line-clamp-2 h-10 group-hover:text-red-600">
           {name}
         </h3>
-
-        {/* Color Options */}
-        {colors && renderColorOptions(colors)}
-
-        <div className="flex items-center justify-between mt-3">
-          {/* Price */}
-          <div className="flex items-baseline gap-2">
-            {salePrice ? (
-              <>
-                <span className="text-base font-bold text-red-600">
-                  {formatPrice(salePrice)}
-                </span>
-                <span className="text-xs text-gray-400 line-through">
-                  {formatPrice(originalPrice)}
-                </span>
-              </>
-            ) : (
-              <span className="text-base font-bold text-gray-900">
-                {formatPrice(originalPrice)}
+        
+        {/* Color Swatches */}
+        {displayColors.length > 0 && (
+          <div className="flex items-center gap-1 mb-2">
+            {displayColors.map((color, idx) => {
+              const bgColor = color.hex || COLOR_MAP[color.name] || "#ccc";
+              return (
+                <div
+                  key={idx}
+                  className="w-4 h-4 rounded-full border border-gray-300 shadow-sm"
+                  style={{ backgroundColor: bgColor }}
+                  title={color.name}
+                />
+              );
+            })}
+            {remainingColors > 0 && (
+              <span className="text-[10px] text-gray-500 ml-1">
+                +{remainingColors}
               </span>
             )}
           </div>
-          {/* Cart Button
-          <button
-            className="p-2 rounded-full bg-gray-50 text-gray-900 hover:bg-blue-600 hover:text-white transition-all duration-200 shadow-sm"
-            onClick={handleAddToCart}
-            title="Thêm vào giỏ hàng"
-          >
-            <ShoppingCart className="w-5 h-5" />
-          </button> */}
+        )}
+
+        <div className="flex items-center gap-2 mt-auto">
+          <span className="text-sm font-bold text-red-600">
+            {formatPrice(salePrice || originalPrice)}
+          </span>
+          {salePrice && (
+            <span className="text-xs text-gray-400 line-through">
+              {formatPrice(originalPrice)}
+            </span>
+          )}
         </div>
       </div>
     </div>
   );
 
+  // Trả về Link nếu có slug (dạng product-ID)
   if (slug) {
     return (
-      <Link to={`/products/${slug}`} state={{ breadcrumb }}>
-        {CardContent}
+      <Link
+        to={`/product/${slug}`}
+        state={{ breadcrumb }}
+        className="group block h-full"
+      >
+        {content}
       </Link>
     );
   }
 
-  return CardContent;
+  return content;
 };
 
 export default ProductCard;

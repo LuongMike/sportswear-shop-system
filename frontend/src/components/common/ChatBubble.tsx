@@ -5,6 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useCustomerChat } from "@/features/customer/chat/hooks/useCustomerChat";
 import { formatChatTime } from "@/utils/chat-utils";
+import { useEffect } from "react";
 
 const ChatBubble = () => {
   const {
@@ -22,6 +23,13 @@ const ChatBubble = () => {
     setMode,
     isAiThinking,
   } = useCustomerChat();
+
+  // Auto-scroll xuống cuối khi có tin nhắn mới
+  useEffect(() => {
+    if (messagesEndRef?.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, isAiThinking]);
 
   return (
     <div className="fixed bottom-6 right-6 z-[100] flex flex-col items-end font-sans">
@@ -50,9 +58,10 @@ const ChatBubble = () => {
           {/* Content */}
           {isLoggedIn ? (
             <>
-              {/* Messages Area */}
-              <ScrollArea className="flex-1 p-4 bg-slate-50 dark:bg-slate-900/50">
-                <div className="space-y-4">
+              {/* Messages Area - height cố định để input không bị đẩy ra */}
+              <div className="flex-1 overflow-hidden">
+                <ScrollArea className="h-full p-4 bg-slate-50 dark:bg-slate-900/50">
+                  <div className="space-y-4">
                   {/* Welcome Message + chế độ */}
                   <div className="flex justify-start">
                     <Avatar className="h-8 w-8 mr-2 mt-1">
@@ -94,7 +103,7 @@ const ChatBubble = () => {
                       <p className="text-slate-700">
                         Xin chào{" "}
                         <span className="font-semibold">
-                          {user?.full_name || "bạn"}
+                          {user?.fullName ?? user?.full_name ?? "bạn"}
                         </span>
                         ! 👋
                       </p>
@@ -120,7 +129,17 @@ const ChatBubble = () => {
                     </div>
                   </div>
 
-                  {messages.map((msg) => {
+                  {messages
+                    .filter((msg) => {
+                      const msgType = (msg.type || "TEXT").toUpperCase();
+                      // Bỏ qua tin nhắn IMAGE/FILE không có fileUrl hợp lệ
+                      if (msgType === "IMAGE" || msgType === "FILE") {
+                        return msg.fileUrl && msg.fileUrl.trim() !== "";
+                      }
+                      // Tin nhắn TEXT phải có content
+                      return msg.content && msg.content.trim() !== "";
+                    })
+                    .map((msg) => {
                     const isCustomer = msg.sender === "CUSTOMER";
                     return (
                       <div
@@ -141,17 +160,33 @@ const ChatBubble = () => {
                               : "bg-white border border-slate-100 text-slate-700 rounded-tl-none"
                           }`}
                         >
-                          {msg.type === "TEXT" && (
-                            <p className="whitespace-pre-line">{msg.content}</p>
-                          )}
-                          {msg.type === "IMAGE" && (
-                              <img src={msg.fileUrl} alt="sent image" className="rounded-lg max-w-full" />
-                          )}
-                          {msg.type === "FILE" && (
-                              <a href={msg.fileUrl} target="_blank" rel="noreferrer" className="underline">
-                                  {msg.content}
-                              </a>
-                          )}
+                          {(() => {
+                            const msgType = (msg.type || "TEXT").toUpperCase();
+                            if (msgType === "IMAGE" && msg.fileUrl) {
+                              return (
+                                <img 
+                                  src={msg.fileUrl} 
+                                  alt="sent image" 
+                                  className="rounded-lg max-w-full"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).style.display = 'none';
+                                  }}
+                                />
+                              );
+                            }
+                            if (msgType === "FILE" && msg.fileUrl) {
+                              return (
+                                <a href={msg.fileUrl} target="_blank" rel="noreferrer" className="underline">
+                                  {msg.content || "Tải file"}
+                                </a>
+                              );
+                            }
+                            // Default: TEXT hoặc type không xác định
+                            if (msg.content) {
+                              return <p className="whitespace-pre-line">{msg.content}</p>;
+                            }
+                            return <p className="text-slate-400 italic text-xs">Tin nhắn trống</p>;
+                          })()}
                           <span className={`text-[10px] mt-1 block text-right ${isCustomer ? "text-blue-100" : "text-slate-400"}`}>
                             {formatChatTime(msg.sentAt)}
                           </span>
@@ -171,9 +206,10 @@ const ChatBubble = () => {
                       </div>
                     </div>
                   )}
-                  <div ref={messagesEndRef} />
-                </div>
-              </ScrollArea>
+                    <div ref={messagesEndRef} />
+                  </div>
+                </ScrollArea>
+              </div>
 
               {/* Input Area */}
               <div className="p-3 border-t bg-background flex gap-2 flex-none">

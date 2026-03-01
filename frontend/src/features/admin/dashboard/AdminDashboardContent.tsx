@@ -1,4 +1,3 @@
-import { DashboardOverview } from "@/features/admin/dashboard/DashboardOverview";
 import { ReportsPage } from "@/features/admin/reports/ReportsPage";
 import { BrandManager } from "@/features/admin/brands/BrandManager";
 import { SportManager } from "@/features/admin/sports/SportManager";
@@ -10,6 +9,7 @@ import { CategoryManager } from "@/features/admin/categories/CategoryManager";
 import { ProductManager } from "@/features/admin/products/ProductManager";
 import { OrderManager } from "@/features/admin/orders/OrderManager";
 import { UserManager } from "@/features/admin/users/UserManager";
+import { useAuthStore } from "@/store/useAuthStore";
 
 interface AdminDashboardContentProps {
   selectedMenu: string;
@@ -18,9 +18,15 @@ interface AdminDashboardContentProps {
 export function AdminDashboardContent({
   selectedMenu,
 }: AdminDashboardContentProps) {
+  const { user } = useAuthStore();
+  const roleName = user?.roleName;
+
+  // Người giao hàng chỉ được vào trang Đơn hàng
+  if (roleName === "Người giao hàng") {
+    return <OrderManager />;
+  }
+
   switch (selectedMenu) {
-    case "dashboard":
-      return <DashboardOverview />;
     case "reports":
       return <ReportsPage />;
     case "orders":
@@ -44,6 +50,6 @@ export function AdminDashboardContent({
     case "sizes":
       return <SizeManager />;
     default:
-      return <DashboardOverview />;
+      return <ReportsPage />;
   }
 }

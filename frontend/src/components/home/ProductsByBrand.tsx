@@ -36,6 +36,7 @@ const ProductsByBrand = () => {
 
   return (
     <div className=" ">
+      <h3 className="text-2xl font-bold mb-6 text-center">Tất cả sản phẩm</h3>
       {/* Brand Filter Buttons */}
       <div className="flex flex-wrap justify-center gap-4 mb-8 ">
         {brands.slice(0, 4).map((brand) => (
@@ -62,18 +63,13 @@ const ProductsByBrand = () => {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 ">
           {products.length > 0 ? (
-            products.map((product, index) => (
+            products.slice(0, 10).map((product) => (
               <ProductCard
                 key={product.id}
-                className={index >= 4 ? "hidden xl:block" : ""}
                 slug={product.slug}
                 name={product.name}
                 image={product.mainImageUrl || "https://placehold.co/245"}
-                originalPrice={new Intl.NumberFormat("vi-VN", {
-                  style: "currency",
-                  currency: "VND",
-                }).format(Number(product.basePrice))}
-                badge={product.badge}
+                originalPrice={product.basePrice}
                 colors={product.colors || []}
                 brand={brands.find((b) => b.slug === selectedBrand)?.name || ""}
               />

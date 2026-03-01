@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useCartStore } from "@/store/useCartStore";
 import { useAuthStore } from "@/store/useAuthStore";
-import { isLocalCart } from "@/data/mockCart";
+// import { isLocalCart } from "@/data/mockCart";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { UserAPI } from "@/services/userApi";
 import { OrderAPI } from "@/services/orderApi";
@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "../../components/ui/radio-group";
 import { saveLatestOrder } from "@/utils/orderStorage";
+import { PaymentAPI } from "@/services/payment.api";
 import { toast } from "sonner";
 import { Loader2, Plus } from "lucide-react";
 import {
@@ -22,6 +23,15 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
+const initialAddressForm = {
+  recipientName: "",
+  phoneNumber: "",
+  city: "",
+  district: "",
+  ward: "",
+  street: "",
+};
+
 const CheckoutPage = () => {
   const navigate = useNavigate();
   const { cart, fetchCart } = useCartStore();
@@ -29,14 +39,11 @@ const CheckoutPage = () => {
   const queryClient = useQueryClient();
   const [note, setNote] = useState("");
   const [isAddressDialogOpen, setIsAddressDialogOpen] = useState(false);
-  const [isPhoneDialogOpen, setIsPhoneDialogOpen] = useState(false);
-  const [newAddress, setNewAddress] = useState("");
-  const [newPhone, setNewPhone] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"cod" | "bank">("cod");
+  const [addressForm, setAddressForm] = useState(initialAddressForm);
+  const [paymentMethod, setPaymentMethod] = useState<"cod" | "VNPAY">("cod");
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(
     null,
   );
-  const [selectedPhoneId, setSelectedPhoneId] = useState<number | null>(null);
 
   // Fetch Cart on mount
   useEffect(() => {
@@ -49,37 +56,39 @@ const CheckoutPage = () => {
     queryFn: UserAPI.getAddresses,
   });
 
-  // Fetch Phones
-  const { data: phones, isLoading: isLoadingPhones } = useQuery({
-    queryKey: ["user-phones"],
-    queryFn: UserAPI.getPhones,
-  });
-
   useEffect(() => {
     if (!addresses || addresses.length === 0) return;
 
     setSelectedAddressId(
       (prev) =>
-        prev ?? addresses.find((a) => a.is_default)?.id ?? addresses[0].id,
+        prev ?? addresses.find((a) => a.isDefault)?.id ?? addresses[0].id,
     );
   }, [addresses]);
 
-  useEffect(() => {
-    if (!phones || phones.length === 0) return;
+  const handleAddressInputChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const { name, value } = e.target;
+    setAddressForm((prev) => ({ ...prev, [name]: value }));
+  };
 
-    setSelectedPhoneId(
-      (prev) => prev ?? phones.find((p) => p.is_default)?.id ?? phones[0].id,
-    );
-  }, [phones]);
+  const resetAddressForm = () => {
+    setAddressForm(initialAddressForm);
+  };
 
   // Mutations
   const createAddressMutation = useMutation({
-    mutationFn: UserAPI.createAddress,
+    mutationFn: async () => {
+      return UserAPI.createAddress(addressForm as any);
+    },
     onSuccess: (data) => {
+      const created = (data as any)?.data ?? data;
       queryClient.invalidateQueries({ queryKey: ["user-addresses"] });
-      setSelectedAddressId(data.id);
+      if (created?.id) {
+        setSelectedAddressId(created.id);
+      }
       setIsAddressDialogOpen(false);
-      setNewAddress("");
+      resetAddressForm();
       toast.success("Đã thêm địa chỉ mới");
     },
     onError: (error: any) => {
@@ -87,55 +96,44 @@ const CheckoutPage = () => {
     },
   });
 
-  const createPhoneMutation = useMutation({
-    mutationFn: UserAPI.createPhone,
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["user-phones"] });
-      setSelectedPhoneId(data.id);
-      setIsPhoneDialogOpen(false);
-      setNewPhone("");
-      toast.success("Đã thêm số điện thoại mới");
-    },
-    onError: (error: any) => {
-      toast.error(
-        error.response?.data?.message || "Lỗi khi thêm số điện thoại",
-      );
-    },
-  });
-
   const createOrderMutation = useMutation({
     mutationFn: OrderAPI.createOrder,
 
-    onSuccess: (res: any) => {
-      // 🔥 TẠO ORDER FRONTEND TỪ RESPONSE
+    onSuccess: async (res: any) => {
+      const data = res?.data ?? res;
+      const orderId = data?.orderId ?? data?.id;
+      const orderCode = data?.orderCode ?? data?.code;
       const selectedAddress = addresses?.find(
         (a) => a.id === selectedAddressId,
       );
 
-      const selectedPhone = phones?.find((p) => p.id === selectedPhoneId);
-
       const orderForStorage = {
-        orderId: res.orderId,
-        orderCode: res.orderCode,
-        orderDate: new Date().toISOString(),
-        status: "PENDING",
+        orderId: orderId ?? res?.orderId,
+        orderCode: orderCode ?? res?.orderCode ?? `ORD-${orderId}`,
+        orderDate: data?.createdAt ?? new Date().toISOString(),
+        status: data?.status ?? "PENDING",
 
         // 🔥 NGƯỜI ĐẶT
-        customerName: user?.full_name,
-        customerPhone: selectedPhone?.phone_number,
+        customerName: user?.fullName ?? user?.full_name,
+        customerPhone: user?.phone,
 
-        shippingAddress: selectedAddress?.address_detail ?? "",
+        shippingAddress: selectedAddress
+          ? `${selectedAddress.street}, ${selectedAddress.ward}, ${selectedAddress.district}, ${selectedAddress.city}`
+          : "",
 
         paymentMethod: paymentMethod,
 
-        totalFinalAmount: totalAmount,
+        totalFinalAmount: data?.total ?? totalAmount,
 
-        items: cart.items.map((item) => ({
-          productName: item.product.name,
-          variantDetails: `${item.variant.color?.name} / ${item.variant.size?.name}`,
+        items: cart!.items.map((item) => ({
+          productName: item.product?.name ?? item.productName,
+          variantDetails: item.variant
+            ? `${item.variant.color?.name ?? ""} / ${item.variant.size?.name ?? ""}`.trim() ||
+              "—"
+            : "—",
           quantity: item.quantity,
-          price: item.variant.price,
-          mainImageUrl: item.variant.image || item.product.mainImageUrl || "",
+          price: item.variant?.price ?? item.price,
+          mainImageUrl: item.imageUrl || item.product?.mainImageUrl || "",
         })),
       };
 
@@ -149,8 +147,18 @@ const CheckoutPage = () => {
         return;
       }
 
-      if (paymentMethod === "bank") {
-        navigate(`/payment/${res.paymentId}`);
+      if (paymentMethod === "VNPAY" && orderId) {
+        try {
+          const paymentUrl = await PaymentAPI.getPaymentUrl(orderId);
+          window.location.href = paymentUrl;
+        } catch (err) {
+          toast.error(
+            "Không thể tạo link thanh toán. Chuyển đến trang xác nhận.",
+          );
+          navigate(`/payment/${orderId}`);
+        }
+      } else if (paymentMethod === "VNPAY") {
+        navigate(`/payment/${data?.paymentId ?? orderId ?? Date.now()}`);
       }
     },
 
@@ -161,8 +169,6 @@ const CheckoutPage = () => {
         (a) => a.id === selectedAddressId,
       );
 
-      const selectedPhone = phones?.find((p) => p.id === selectedPhoneId);
-
       const fakeOrder = {
         orderId: Date.now(),
         orderCode: `DEMO-${Date.now()}`,
@@ -170,21 +176,26 @@ const CheckoutPage = () => {
         status: "PENDING",
 
         // 🔥 NGƯỜI ĐẶT
-        customerName: user?.full_name,
-        customerPhone: selectedPhone?.phone_number,
+        customerName: user?.fullName ?? user?.full_name,
+        customerPhone: user?.phone,
 
-        shippingAddress: selectedAddress?.address_detail ?? "",
+        shippingAddress: selectedAddress
+          ? `${selectedAddress.street}, ${selectedAddress.ward}, ${selectedAddress.district}, ${selectedAddress.city}`
+          : "",
 
         paymentMethod: paymentMethod,
 
         totalFinalAmount: totalAmount,
 
-        items: cart.items.map((item) => ({
-          productName: item.product.name,
-          variantDetails: `${item.variant.color?.name} / ${item.variant.size?.name}`,
+        items: cart!.items.map((item) => ({
+          productName: item.product?.name ?? item.productName,
+          variantDetails: item.variant
+            ? `${item.variant.color?.name ?? ""} / ${item.variant.size?.name ?? ""}`.trim() ||
+              "—"
+            : "—",
           quantity: item.quantity,
-          price: item.variant.price,
-          mainImageUrl: item.variant.image || item.product.mainImageUrl || "",
+          price: item.variant?.price ?? item.price,
+          mainImageUrl: item.imageUrl || item.product?.mainImageUrl || "",
         })),
       };
 
@@ -199,59 +210,43 @@ const CheckoutPage = () => {
     },
   });
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     if (!cart || cart.items.length === 0) {
       toast.error("Giỏ hàng trống");
       return;
     }
-
-    if (!selectedAddressId || !selectedPhoneId) {
+    if (!selectedAddressId) {
       toast.error("Thiếu thông tin giao hàng");
       return;
     }
 
-    createOrderMutation.mutate(
-      {
-        cartId: cart.id,
-        shippingAddressId: selectedAddressId,
-        userPhoneId: selectedPhoneId,
+    try {
+      // Gọi API tạo đơn hàng
+      const orderRes = await OrderAPI.createOrder({
+        addressId: selectedAddressId,
+        paymentMethod: paymentMethod === "cod" ? "cod" : "VNPAY",
         note,
-        paymentMethod,
-      },
-      {
-        onSuccess: (res: any) => {
-          // ✅ API THẬT OK
-          if (paymentMethod === "cod") {
-            toast.success("Đặt hàng thành công!");
-            fetchCart();
-            navigate("/account/orders");
-            return;
-          }
+      });
+      const orderId =
+        orderRes?.data?.orderId ?? orderRes?.orderId ?? orderRes?.id;
 
-          if (paymentMethod === "bank") {
-            navigate(`/payment/${res.paymentId}`);
-          }
-        },
-
-        onError: () => {
-          // 🧪 FALLBACK DEMO
-          console.warn("API lỗi → dùng dữ liệu ảo");
-
-          const fakePaymentId = Date.now(); // fake id
-
-          toast.info("Đang dùng dữ liệu demo để thanh toán");
-
-          if (paymentMethod === "cod") {
-            navigate("/account/orders");
-            return;
-          }
-
-          if (paymentMethod === "bank") {
-            navigate(`/payment/${fakePaymentId}`);
-          }
-        },
-      },
-    );
+      if (paymentMethod === "cod") {
+        toast.success("Đặt hàng thành công!");
+        fetchCart();
+        navigate("/account/orders");
+      } else if (paymentMethod === "VNPAY" && orderId) {
+        // Gọi API lấy paymentUrl (trả về string)
+        const paymentUrl = await PaymentAPI.getPaymentUrl(orderId);
+        if (typeof paymentUrl === "string" && paymentUrl.startsWith("http")) {
+          window.location.href = paymentUrl;
+        } else {
+          toast.error("Không lấy được link thanh toán");
+          navigate(`/payment/${orderId}`);
+        }
+      }
+    } catch {
+      toast.error("Có lỗi khi đặt hàng");
+    }
   };
 
   if (!user) {
@@ -277,7 +272,7 @@ const CheckoutPage = () => {
   }
 
   const totalAmount = cart.items.reduce((sum, item) => {
-    const price = item.variant.price;
+    const price = item.variant?.price ?? item.price ?? 0;
     return sum + Number(price) * item.quantity;
   }, 0);
 
@@ -298,40 +293,114 @@ const CheckoutPage = () => {
                   onOpenChange={setIsAddressDialogOpen}
                 >
                   <DialogTrigger asChild>
-                    <Button variant="outline" size="sm">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        resetAddressForm();
+                        setIsAddressDialogOpen(true);
+                      }}
+                    >
                       <Plus className="w-4 h-4 mr-2" /> Thêm địa chỉ
                     </Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent
+                    className="max-w-md"
+                    onInteractOutside={() => resetAddressForm()}
+                  >
                     <DialogHeader>
                       <DialogTitle>Thêm địa chỉ mới</DialogTitle>
                     </DialogHeader>
-                    <div className="space-y-4 py-4">
+                    <div className="grid gap-4 py-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Người nhận</Label>
+                          <Input
+                            name="recipientName"
+                            value={addressForm.recipientName}
+                            onChange={handleAddressInputChange}
+                            placeholder="VD: Nguyễn Văn A"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Số điện thoại</Label>
+                          <Input
+                            name="phoneNumber"
+                            value={addressForm.phoneNumber}
+                            onChange={handleAddressInputChange}
+                            placeholder="09xxxx"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Tỉnh/Thành phố</Label>
+                          <Input
+                            name="city"
+                            value={addressForm.city}
+                            onChange={handleAddressInputChange}
+                            placeholder="Hà Nội"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Quận/Huyện</Label>
+                          <Input
+                            name="district"
+                            value={addressForm.district}
+                            onChange={handleAddressInputChange}
+                            placeholder="Cầu Giấy"
+                          />
+                        </div>
+                      </div>
                       <div className="space-y-2">
-                        <Label>Địa chỉ chi tiết</Label>
+                        <Label>Phường/Xã</Label>
                         <Input
-                          value={newAddress}
-                          onChange={(e) => setNewAddress(e.target.value)}
-                          placeholder="Số nhà, tên đường, phường/xã..."
+                          name="ward"
+                          value={addressForm.ward}
+                          onChange={handleAddressInputChange}
+                          placeholder="Dịch Vọng Hậu"
                         />
                       </div>
-                      <Button
-                        onClick={() =>
-                          createAddressMutation.mutate({
-                            address_detail: newAddress,
-                            is_default: true,
-                          })
-                        }
-                        disabled={
-                          createAddressMutation.isPending || !newAddress
-                        }
-                        className="w-full"
-                      >
-                        {createAddressMutation.isPending && (
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        )}
-                        Lưu địa chỉ
-                      </Button>
+                      <div className="space-y-2">
+                        <Label>Số nhà, tên đường</Label>
+                        <Input
+                          name="street"
+                          value={addressForm.street}
+                          onChange={handleAddressInputChange}
+                          placeholder="Số 10, ngõ 2..."
+                        />
+                      </div>
+                      <div className="flex gap-3 mt-4">
+                        <Button
+                          variant="ghost"
+                          className="flex-1"
+                          type="button"
+                          onClick={() => {
+                            resetAddressForm();
+                            setIsAddressDialogOpen(false);
+                          }}
+                        >
+                          Hủy
+                        </Button>
+                        <Button
+                          className="flex-[2]"
+                          onClick={() => createAddressMutation.mutate()}
+                          disabled={
+                            createAddressMutation.isPending ||
+                            !addressForm.recipientName ||
+                            !addressForm.phoneNumber ||
+                            !addressForm.city ||
+                            !addressForm.district ||
+                            !addressForm.ward ||
+                            !addressForm.street
+                          }
+                        >
+                          {createAddressMutation.isPending && (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          )}
+                          Lưu địa chỉ
+                        </Button>
+                      </div>
                     </div>
                   </DialogContent>
                 </Dialog>
@@ -358,14 +427,26 @@ const CheckoutPage = () => {
                       />
                       <Label
                         htmlFor={`addr-${addr.id}`}
-                        className="flex-1 cursor-pointer"
+                        className="flex-1 cursor-pointer space-y-1"
                       >
-                        {addr.address_detail}{" "}
-                        {addr.is_default && (
-                          <span className="text-xs text-blue-600 font-medium ml-2">
-                            (Mặc định)
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="font-semibold">
+                            {addr.recipientName}
                           </span>
-                        )}
+                          <span className="text-gray-400">|</span>
+                          <span className="text-gray-600">
+                            {addr.phoneNumber}
+                          </span>
+                          {addr.isDefault && (
+                            <span className="text-[10px] text-blue-600 font-medium ml-2 uppercase">
+                              Mặc định
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-600">
+                          {addr.street}, {addr.ward}, {addr.district},{" "}
+                          {addr.city}
+                        </p>
                       </Label>
                     </div>
                   ))}
@@ -373,92 +454,6 @@ const CheckoutPage = () => {
               ) : (
                 <p className="text-red-500 text-sm">
                   Bạn chưa có địa chỉ nào. Vui lòng thêm địa chỉ.
-                </p>
-              )}
-            </div>
-
-            {/* Phone Section */}
-            <div className="bg-white p-6 rounded-lg shadow-sm">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold">Số điện thoại</h2>
-                <Dialog
-                  open={isPhoneDialogOpen}
-                  onOpenChange={setIsPhoneDialogOpen}
-                >
-                  <DialogTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <Plus className="w-4 h-4 mr-2" /> Thêm SĐT
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Thêm số điện thoại mới</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div className="space-y-2">
-                        <Label>Số điện thoại</Label>
-                        <Input
-                          value={newPhone}
-                          onChange={(e) => setNewPhone(e.target.value)}
-                          placeholder="0901234567"
-                        />
-                      </div>
-                      <Button
-                        onClick={() =>
-                          createPhoneMutation.mutate({
-                            phone_number: newPhone,
-                            is_default: true,
-                          })
-                        }
-                        disabled={createPhoneMutation.isPending || !newPhone}
-                        className="w-full"
-                      >
-                        {createPhoneMutation.isPending && (
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        )}
-                        Lưu số điện thoại
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              </div>
-
-              {isLoadingPhones ? (
-                <p>Đang tải số điện thoại...</p>
-              ) : phones && phones.length > 0 ? (
-                <RadioGroup
-                  value={selectedPhoneId?.toString()}
-                  onValueChange={(val: string) =>
-                    setSelectedPhoneId(Number(val))
-                  }
-                  className="space-y-3"
-                >
-                  {phones.map((phone) => (
-                    <div
-                      key={phone.id}
-                      className="flex items-center space-x-2 border p-3 rounded-md cursor-pointer hover:bg-gray-50"
-                    >
-                      <RadioGroupItem
-                        value={phone.id.toString()}
-                        id={`phone-${phone.id}`}
-                      />
-                      <Label
-                        htmlFor={`phone-${phone.id}`}
-                        className="flex-1 cursor-pointer"
-                      >
-                        {phone.phone_number}{" "}
-                        {phone.is_default && (
-                          <span className="text-xs text-blue-600 font-medium ml-2">
-                            (Mặc định)
-                          </span>
-                        )}
-                      </Label>
-                    </div>
-                  ))}
-                </RadioGroup>
-              ) : (
-                <p className="text-red-500 text-sm">
-                  Bạn chưa có số điện thoại nào. Vui lòng thêm SĐT.
                 </p>
               )}
             </div>
@@ -481,27 +476,27 @@ const CheckoutPage = () => {
 
               <div className="space-y-4 mb-6 max-h-80 overflow-y-auto pr-2">
                 {cart.items.map((item) => {
-                  const price = item.variant.price;
+                  const price = item.variant?.price ?? item.price;
+                  const itemId = item.itemId ?? item.id ?? item.productId;
                   return (
-                    <div key={item.itemId} className="flex gap-3 text-sm">
+                    <div key={itemId} className="flex gap-3 text-sm">
                       <div className="w-16 h-16 shrink-0 rounded-md overflow-hidden border">
                         <img
                           src={
-                            item.variant.image ||
-                            item.product.mainImageUrl ||
-                            ""
+                            item.imageUrl 
+                            || ""
                           }
-                          alt={item.product.name}
+                          alt={item.product?.name ?? item.productName}
                           className="w-full h-full object-cover"
                         />
                       </div>
                       <div className="flex-1">
                         <p className="font-medium line-clamp-2">
-                          {item.product.name}
+                          {item.product?.name ?? item.productName}
                         </p>
                         <p className="text-gray-500 text-xs">
-                          {item.variant.color?.name || "N/A"} /{" "}
-                          {item.variant.size?.name || "N/A"}
+                          {item.variant?.color?.name ?? "N/A"} /{" "}
+                          {item.variant?.size?.name ?? "N/A"}
                         </p>
                         <div className="flex justify-between mt-1">
                           <span className="text-gray-500">
@@ -551,7 +546,7 @@ const CheckoutPage = () => {
                   <RadioGroup
                     value={paymentMethod}
                     onValueChange={(val) =>
-                      setPaymentMethod(val as "cod" | "bank")
+                      setPaymentMethod(val as "cod" | "VNPAY")
                     }
                     className="space-y-3"
                   >
@@ -566,9 +561,9 @@ const CheckoutPage = () => {
                     </div>
 
                     <div className="flex items-center space-x-2 border p-3 rounded-md cursor-pointer">
-                      <RadioGroupItem value="bank" id="pay-bank" />
+                      <RadioGroupItem value="VNPAY" id="pay-VNPAY" />
                       <Label
-                        htmlFor="pay-bank"
+                        htmlFor="pay-VNPAY"
                         className="cursor-pointer flex-1"
                       >
                         Chuyển khoản ngân hàng

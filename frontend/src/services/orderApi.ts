@@ -30,29 +30,71 @@ export interface CreateOrderPayload {
   note?: string;
 }
 
+function getAccessToken() {
+  const authStorage = localStorage.getItem("auth-storage");
+  if (!authStorage) return null;
+  try {
+    const parsed = JSON.parse(authStorage);
+    return parsed.state?.accessToken || null;
+  } catch {
+    return null;
+  }
+}
+
 export const OrderAPI = {
   // createOrder: async (payload: CreateOrderPayload) => {
   //   const response = await api.post("/api/orders", payload);
   //   return response.data.data;
   // },
 
-  createOrder(data: {
-    cartId: number;
+  /** BE: POST /api/orders/checkout trả { id, status, total, items, createdAt } */
+  createOrder: async (data: {
+    cartId?: number;
     shippingAddressId: number;
-    userPhoneId: number;
+    userPhoneId?: number;
+    addressDetail?: string;
+    phone?: string;
     note?: string;
     paymentMethod: "cod" | "bank";
-  }) {
-    return api.post("/orders", data).then((res) => res.data);
+  }) => {
+    const response = await api.post("/api/orders/checkout", data);
+    return response.data;
   },
 
-  getOrders: async (page = 1, limit = 10) => {
-    const response = await api.get(`/api/orders?page=${page}&limit=${limit}`);
-    return response.data.data; // { orders: [], pagination: {} }
+  getOrders: async () => {
+    const response = await api.get(`/api/orders`);
+
+    return response.data?.data ?? response.data ?? [];
+  },
+
+  getAllOrders: async () => {
+    const bearToken = getAccessToken();
+    const response = await api.get(`/api/orders/admin`, {
+      headers: {
+        Authorization: `Bearer ${bearToken}`,
+      },
+    });
+
+    return response.data?.data ?? response.data ?? [];
   },
 
   getOrderById: async (orderId: number) => {
     const response = await api.get(`/api/orders/${orderId}`);
-    return response.data.data;
+    return response.data?.data ?? response.data;
+  },
+
+  /** BE: PATCH /api/orders/{id}/status?status=... */
+  updateOrderStatus: async (orderId: number, status: string) => {
+    const bearToken = getAccessToken();
+    const response = await api.patch(
+      `/api/orders/${orderId}/status?status=${encodeURIComponent(status)}`,
+      undefined,
+      {
+        headers: {
+          Authorization: `Bearer ${bearToken}`,
+        },
+      },
+    );
+    return response.data;
   },
 };

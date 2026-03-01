@@ -11,7 +11,7 @@ export class AuthAPI {
   // Request OTP cho signup/signin
   static async requestOtp(
     identifier: string,
-    full_name?: string
+    full_name?: string,
   ): Promise<RequestOtpResponse> {
     const payload: { identifier: string; full_name?: string } = { identifier };
     if (full_name) payload.full_name = full_name;
@@ -23,7 +23,7 @@ export class AuthAPI {
   // Verify OTP
   static async verifyOtp(
     otpToken: string,
-    otpCode: string
+    otpCode: string,
   ): Promise<VerifyOtpResponse> {
     const response = await api.post("/api/auth/verify-otp", {
       otpToken,
@@ -40,7 +40,7 @@ export class AuthAPI {
 
   // Refresh access token
   static async refreshToken(): Promise<RefreshTokenResponse> {
-    const response = await api.post("/api/auth/refresh-token");
+    const response = await api.post("/api/auth/refresh");
     return response.data;
   }
 

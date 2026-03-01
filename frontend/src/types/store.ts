@@ -11,7 +11,8 @@ import type {
 
 export interface AuthState {
   accessToken: string | null;
-  user: User | null;
+  refreshToken: string | null; // Dữ liệu chuỗi token
+  user: any | null; 
   loading: boolean;
 
   // OTP state
@@ -21,34 +22,19 @@ export interface AuthState {
   otpExpiresAt: string | null;
 
   setAccessToken: (token: string) => void;
-  setUser: (user: User) => void;
+  setRefreshToken: (token: string | null) => void;
+  setUser: (user: any) => void;
   setOtpSent: (otpSent: boolean) => void;
   setOtpToken: (token: string | null) => void;
   clearState: () => void;
 
   // Auth actions
-  loginWithEmailPassword: (
-    email: string,
-    password: string
-  ) => Promise<LoginResponse>;
-  registerWithEmail: (data: {
-    email: string;
-    password: string;
-    full_name: string;
-  }) => Promise<RegisterResponse>;
-  requestPasswordReset: (email: string) => Promise<ForgotPasswordResponse>;
-  resetPassword: (
-    token: string,
-    newPassword: string
-  ) => Promise<ResetPasswordResponse>;
-  requestOtp: (
-    identifier: string,
-    full_name?: string
-  ) => Promise<RequestOtpResponse>;
-  verifyOtp: (otpCode: string) => Promise<VerifyOtpResponse>;
-  resendOtp: () => Promise<ResendOtpResponse>;
-  refreshToken: () => Promise<void>;
+  loginWithEmailPassword: (email: string, password: string) => Promise<any>;
+  registerWithEmail: (data: any) => Promise<any>;
   logout: () => Promise<void>;
   getCurrentUser: () => Promise<void>;
   initializeAuth: () => Promise<void>;
+  
+  // Đổi tên hàm thành refreshAuth để tránh trùng với biến refreshToken ở trên
+  refreshAuth: () => Promise<void>; 
 }

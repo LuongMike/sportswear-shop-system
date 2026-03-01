@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useNavigate } from "react-router";
 
 // Layout Components
 import { AdminSidebar } from "@/features/admin/layout/AdminSidebar";
@@ -11,11 +12,28 @@ import { AdminDashboardContent } from "@/features/admin/dashboard/AdminDashboard
 import { useAdminChat } from "@/features/admin/chat/hooks/useAdminChat";
 import { ChatWindow } from "@/features/admin/chat/components/ChatWindow";
 import { ImagePreviewModal } from "@/features/admin/chat/components/ImagePreviewModal";
+import { useAuthStore } from "@/store/useAuthStore";
 
 export default function AdminDashboard() {
+  const navigate = useNavigate();
+  const { user } = useAuthStore();
+  const logout = useAuthStore((state) => state.logout);
+
+  const handleLogout = async () => {
+    try {
+      console.log("Đang tiến hành logout...");
+      await logout(); 
+      
+      localStorage.clear(); 
+       window.location.href = "/";
+    } catch (error) {
+      console.error("Lỗi khi logout:", error);
+    }
+  };
+
   // State: Tab chính (System vs Chat)
   const [activePrimary, setActivePrimary] = useState<"system" | "chat">(
-    "system"
+    "system",
   );
 
   // State: Mục được chọn
@@ -37,6 +55,24 @@ export default function AdminDashboard() {
     handleFileChange,
   } = useAdminChat();
 
+  useEffect(() => {
+    if (!user) return;
+    if (
+      user.roleName !== "Quản Trị Viên" &&
+      user.roleName !== "Người giao hàng"
+    ) {
+      navigate("/");
+    }
+  }, [user, navigate]);
+
+  // Người giao hàng: luôn ép về trang Đơn hàng, không cho vào menu khác
+  useEffect(() => {
+    if (user?.roleName === "Người giao hàng") {
+      setActivePrimary("system");
+      setSelectedMenu("orders");
+    }
+  }, [user?.roleName]);
+
   return (
     <div className="flex h-screen w-full bg-background overflow-hidden">
       <TooltipProvider>
@@ -47,6 +83,7 @@ export default function AdminDashboard() {
           activePrimary={activePrimary}
           setActivePrimary={setActivePrimary}
           unreadCount={rooms.filter((r) => r.hasUnread).length}
+          onLogout={handleLogout}
         />
 
         {/* =========================================

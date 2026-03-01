@@ -7,8 +7,12 @@ export function useBrands() {
     queryKey: ["brands"],
     queryFn: async () => {
       try {
-        return await brandApi.getAll();
-      } catch {
+        const result = await brandApi.getAll();
+        console.log("Brands result:", result);
+        // brandApi.getAll() đã trả về { brands: Brand[] }
+        return { data: result };
+      } catch (error) {
+        console.error("Error fetching brands:", error);
         return fallbackBrandsResponse;
       }
     },

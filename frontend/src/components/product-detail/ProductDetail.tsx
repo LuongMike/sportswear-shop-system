@@ -1,4 +1,3 @@
-import React from "react";
 import type { useProductDetail } from "@/hooks/useProductDetail";
 import ProductGallery from "./ProductGallery";
 import ProductInfo from "./ProductInfo";

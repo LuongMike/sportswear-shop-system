@@ -4,6 +4,7 @@ import com.team6.ecommercesystem.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -20,4 +21,8 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     List<User> findAllWithRoles();
 
     List<User> findByStatusTrueAndLastLoginDateBefore(LocalDateTime thresholdDate);
+
+    // Đếm người dùng đăng ký mới
+    @Query("SELECT COUNT(u) FROM User u WHERE u.createdAt >= :startDate AND u.createdAt <= :endDate")
+    Long countNewUsers(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
 }

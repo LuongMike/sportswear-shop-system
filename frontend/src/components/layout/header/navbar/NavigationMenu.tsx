@@ -1,6 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
-import { useCallback } from "react";
-
+import { Link, useNavigate } from "react-router";
 import {
   NavigationMenu as ShadcnNavMenu,
   NavigationMenuContent,
@@ -9,222 +7,148 @@ import {
   NavigationMenuTrigger,
   NavigationMenuLink,
 } from "@/components/ui/navigation-menu";
-
-import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigation } from "@/hooks/useNavigationQuery";
+import { Skeleton } from "@/components/ui/skeleton";
 
-import type { NavigationRoot } from "@/types/api";
-import { NAVIGATION_TYPE } from "@/types/api";
-import { mainCategories, getDropdownContent } from "@/data/navigation";
-
-/* =====================
-   UI STATES
-===================== */
-const SkeletonNav = () => (
-  <div className="flex items-center justify-center w-full">
-    <div className="flex space-x-4">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <Skeleton key={i} className="h-8 w-24" />
-      ))}
-    </div>
-  </div>
-);
-
-const ErrorNav = () => (
-  <div className="flex items-center justify-center w-full">
-    <p className="text-sm text-red-500">Không thể tải menu navigation</p>
-  </div>
-);
-
-/* =====================
-   COMPONENT
-===================== */
 const NavigationMenu = () => {
   const navigate = useNavigate();
-  const { data: response, isLoading, error } = useNavigation();
+  const { data: navigationData, isLoading, error } = useNavigation();
 
-  let navigationData: NavigationRoot[] = response?.data ?? [];
-  const useFallback = navigationData.length === 0 || !!error;
+  const createSlugFromName = (name: string) => {
+    if (!name) return "";
+    return name
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[đĐ]/g, "d")
+      .replace(/[^a-z0-9\s-]/g, "")
+      .trim()
+      .replace(/\s+/g, "-");
+  };
 
-  if (useFallback) {
-    navigationData = mainCategories
-      .filter((c) => c.title !== "New") // "Hàng Mới" đã render static bên dưới
-      .map((category) => {
-        const slugMap: { [key: string]: string } = {
-          Nam: "nam",
-          Nữ: "nu",
-          "Trẻ Em": "tre-em",
-          "Thương Hiệu": "thuong-hieu",
-          "Thể Thao": "the-thao",
-          "Bộ Sưu Tập": "bo-suu-tap",
-          "Black Friday": "black-friday",
-        };
-        const slug = slugMap[category.title] || "";
+  // LOGIC QUAN TRỌNG: Tạo URL kèm ID để useProductPageLogic có thể đọc
+  const getLinkHref = (navItem: any, item: any) => {
+    const parentName = navItem.categoryName.toLowerCase();
+    if (parentName.includes("thương hiệu"))
+      return `/collections?brandId=${item.id}`;
+    if (parentName.includes("thể thao"))
+      return `/collections?sportId=${item.id}`;
+    return `/collections?categoryId=${item.id}`;
+  };
 
-        const children = getDropdownContent(category.title).map((section) => {
-          const sectionItems = section.items.map((item) => {
-            const itemSlug = item.href.split("/").pop() || "";
-            return {
-              id: item.name,
-              name: item.name,
-              slug: itemSlug,
-              href: item.href, // Giữ href gốc để dùng đúng URL từ data
-            };
-          });
+  const getParentHref = (navItem: any) =>
+    `/collections?categoryId=${navItem.id}`;
 
-          return {
-            id: section.title,
-            name: section.title,
-            items: sectionItems,
-          };
-        });
+  // --- GIỮ NGUYÊN PHẦN HIỂN THỊ (HTML/UI) ---
 
-        let type: (typeof NAVIGATION_TYPE)[keyof typeof NAVIGATION_TYPE] =
-          NAVIGATION_TYPE.CATEGORY;
-        if (["Nam", "Nữ", "Trẻ Em"].includes(category.title)) {
-          type = NAVIGATION_TYPE.GENDER;
-        }
-
-        return {
-          id: category.title,
-          name: category.title,
-          slug: slug,
-          type: type,
-          children: children,
-          parentHref: category.href, // Giữ href gốc cho "Xem tất cả" và link cha
-        };
-      });
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center w-full">
+        <div className="flex space-x-4">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <Skeleton key={index} className="h-8 w-24" />
+          ))}
+        </div>
+      </div>
+    );
   }
 
-  /* =====================
-     HOOKS (PHẢI Ở TRÊN)
-  ===================== */
-  const getLinkHref = useCallback((parentSlug: string, itemSlug: string) => {
-    if (parentSlug === "thuong-hieu") return `/brands/${itemSlug}`;
-    if (parentSlug === "the-thao") return `/sports/${itemSlug}`;
-    return `/collections/${parentSlug}/${itemSlug}`;
-  }, []);
+  if (error) {
+    return (
+      <div className="flex items-center justify-center w-full">
+        <p className="text-red-500 text-sm">Không thể tải menu navigation</p>
+      </div>
+    );
+  }
 
-  const getParentHref = useCallback((slug: string) => {
-    if (slug === "thuong-hieu") return "/brands";
-    if (slug === "the-thao") return "/sports";
-    return `/collections/${slug}`;
-  }, []);
+  if (!navigationData || !Array.isArray(navigationData)) {
+    return null;
+  }
 
-  /* =====================
-     EARLY RETURNS
-  ===================== */
-  if (isLoading) return <SkeletonNav />;
-  if (error && navigationData.length === 0) return <ErrorNav />;
-  if (navigationData.length === 0 || !navigationData) return null;
-
-  /* =====================
-     RENDER
-  ===================== */
   return (
     <div className="flex items-center justify-center w-full">
-      <ShadcnNavMenu viewport className="w-full">
+      <ShadcnNavMenu viewport={true} className="w-full">
         <NavigationMenuList className="flex items-center justify-center space-x-0">
-          {/* Static item */}
           <NavigationMenuItem>
             <NavigationMenuLink asChild>
               <Link
-                to="/collections/new-arrivals"
-                className="block px-4 py-6 text-lg font-medium text-black hover:text-red-500 transition-colors"
+                to="/collections"
+                className="block px-4 py-6 text-lg font-medium text-black hover:text-red-500 transition-all duration-200"
               >
                 Hàng Mới
               </Link>
             </NavigationMenuLink>
           </NavigationMenuItem>
 
-          {/* Dynamic items */}
-          {navigationData.map((navItem) => {
-            const children = navItem.children;
+          {navigationData.map((navItem) => (
+            <NavigationMenuItem key={navItem.id} className="relative">
+              {navItem.children && navItem.children.length > 0 ? (
+                <>
+                  <NavigationMenuTrigger
+                    className="h-auto px-4 cursor-pointer py-6 text-lg font-medium text-black bg-transparent hover:bg-transparent hover:text-red-500 transition-all duration-200 rounded-none"
+                    onClick={() => navigate(getParentHref(navItem))}
+                  >
+                    {navItem.categoryName}
+                  </NavigationMenuTrigger>
 
-            // ===== No dropdown =====
-            if (!children || children.length === 0) {
-              const to = navItem.parentHref ?? getParentHref(navItem.slug);
-              return (
-                <NavigationMenuItem key={navItem.id}>
-                  <NavigationMenuLink asChild>
-                    <Link
-                      to={to}
-                      className="block px-4 py-6 text-lg font-medium text-black hover:text-red-500 transition-colors"
-                    >
-                      {navItem.name}
-                    </Link>
-                  </NavigationMenuLink>
-                </NavigationMenuItem>
-              );
-            }
-
-            // ===== With dropdown =====
-            return (
-              <NavigationMenuItem key={navItem.id} className="relative">
-                <NavigationMenuTrigger className="h-auto px-4 py-6 text-lg font-medium text-black hover:text-red-500 bg-transparent rounded-none">
-                  {navItem.name}
-                </NavigationMenuTrigger>
-
-                <NavigationMenuContent>
-                  <div className="w-full px-4 sm:px-6 md:px-8 py-8 bg-white">
-                    <div
-                      className="grid gap-8 max-w-[1600px] mx-auto"
-                      style={{
-                        gridTemplateColumns: `repeat(${children.length}, minmax(0, 1fr))`,
-                      }}
-                    >
-                      {children.map((column) => (
-                        <div key={column.id} className="space-y-4">
-                          {/* Level 2 */}
-                          <h3 className="text-base font-bold uppercase tracking-wide border-b border-gray-200 pb-2">
-                            {column.name}
-                          </h3>
-
-                          {/* Level 3 */}
-                          <ul className="space-y-2">
-                            {column.items
-                              .filter(
-                                (item) =>
-                                  !["Ưu Đãi", "Hàng Mới"].includes(item.name),
-                              )
-                              .map((item) => (
-                                <li key={item.id}>
-                                  <NavigationMenuLink asChild>
-                                    <Link
-                                      to={
-                                        item.href ??
-                                        getLinkHref(navItem.slug, item.slug)
-                                      }
-                                      className="block text-sm text-gray-600 hover:text-red-500 transition-colors"
-                                    >
-                                      {item.name}
-                                    </Link>
-                                  </NavigationMenuLink>
-                                </li>
-                              ))}
-                          </ul>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Parent link */}
-                    <div className="mt-6 text-right">
-                      <button
-                        onClick={() =>
-                          navigate(
-                            navItem.parentHref ?? getParentHref(navItem.slug)
-                          )
-                        }
-                        className="text-sm font-medium text-black hover:text-red-500"
+                  <NavigationMenuContent>
+                    <div className="w-full px-8 py-8 bg-white">
+                      <div
+                        className="grid gap-8 container mx-auto"
+                        style={{
+                          gridTemplateColumns: `repeat(${navItem.children.length}, minmax(0, 1fr))`,
+                        }}
                       >
-                        Xem tất cả →
-                      </button>
+                        {navItem.children.map((column: any) => (
+                          <div key={column.id} className="space-y-4">
+                            <h3 className="text-base font-bold text-black uppercase tracking-wider border-b border-gray-200 pb-2">
+                              <NavigationMenuLink asChild>
+                                <Link to={getLinkHref(navItem, column)}>
+                                  {column.categoryName}
+                                </Link>
+                              </NavigationMenuLink>
+                            </h3>
+
+                            <ul className="space-y-2">
+                              {column.children &&
+                                column.children
+                                  .filter(
+                                    (item: any) =>
+                                      !["Ưu Đãi", "Hàng Mới"].includes(
+                                        item.categoryName,
+                                      ),
+                                  )
+                                  .map((item: any) => (
+                                    <li key={item.id}>
+                                      <NavigationMenuLink asChild>
+                                        <Link
+                                          to={getLinkHref(navItem, item)}
+                                          className="block text-sm text-gray-600 hover:text-red-500 transition-colors"
+                                        >
+                                          {item.categoryName}
+                                        </Link>
+                                      </NavigationMenuLink>
+                                    </li>
+                                  ))}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                </NavigationMenuContent>
-              </NavigationMenuItem>
-            );
-          })}
+                  </NavigationMenuContent>
+                </>
+              ) : (
+                <NavigationMenuLink asChild>
+                  <Link
+                    to={getParentHref(navItem)}
+                    className="block px-4 py-6 text-lg font-medium text-black hover:text-red-500 transition-all duration-200"
+                  >
+                    {navItem.categoryName}
+                  </Link>
+                </NavigationMenuLink>
+              )}
+            </NavigationMenuItem>
+          ))}
         </NavigationMenuList>
       </ShadcnNavMenu>
     </div>

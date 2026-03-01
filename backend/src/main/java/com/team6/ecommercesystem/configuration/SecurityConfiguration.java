@@ -33,9 +33,15 @@ public class SecurityConfiguration {
             "/api/auth/register",
             "/api/auth/forgot-password",
             "/api/auth/reset-password",
+            "/api/payment/**",
+            "/api/collections/**",
+            "/api/chat/**",
+            "/api/products/**",
             "/v3/api-docs/**",
             "/swagger-ui/**",
-            "/swagger-ui.html"
+            "/swagger-ui.html",
+            "/api/navigation/**",
+            "/api/brands/**"
     };
 
     private static final String CORS_MAPPING_PATTERN ="/**";

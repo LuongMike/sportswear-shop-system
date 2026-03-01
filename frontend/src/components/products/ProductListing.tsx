@@ -1,5 +1,5 @@
 import ProductCard from "@/components/ui/ProductCard";
-import ProductFilters from "@/components/products/ProductFilters";
+import ProductFiltersComponent from "@/components/products/ProductFilters";
 import Breadcrumb from "@/components/ui/Breadcrumb";
 import ProductSort from "@/components/products/ProductSort";
 import {
@@ -12,15 +12,15 @@ import {
   PaginationEllipsis,
 } from "@/components/ui/pagination";
 import type {
-  ProductFilters as APIProductFilters,
+  ProductFilters,
   ProductsResponse,
 } from "@/services/productsApi";
 
 interface ProductListingProps {
   title: string;
   breadcrumbItems: { label: string; href: string }[];
-  filters: APIProductFilters;
-  onFiltersChange: (filters: APIProductFilters) => void;
+  filters: ProductFilters;
+  onFiltersChange: (filters: ProductFilters) => void;
   sortBy: string;
   onSortChange: (sort: string) => void;
   data: ProductsResponse | undefined;
@@ -82,7 +82,7 @@ const ProductListing = ({
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Sidebar Filters */}
         <div className="w-full lg:w-64 xl:w-72 shrink-0">
-          <ProductFilters filters={filters} onFiltersChange={onFiltersChange} />
+          <ProductFiltersComponent filters={filters} onFiltersChange={onFiltersChange} />
         </div>
 
         {/* Main Content */}
@@ -127,11 +127,9 @@ const ProductListing = ({
                   }
                   originalPrice={product.basePrice}
                   salePrice={undefined}
-                  badge={product.badge}
-                  rating={0}
                   brand={product.brandName || ""}
+                  breadcrumb={breadcrumbItems}
                   colors={product.colors}
-                  breadcrumb={breadcrumbItems} // Truyền breadcrumb xuống
                 />
               ))}
             </div>

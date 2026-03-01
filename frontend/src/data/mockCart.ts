@@ -55,7 +55,10 @@ export function addToLocalCart(
 
   const newItem: CartItem = {
     itemId: -Date.now(),
+    productId: variantId,
+    productName: productInfo.productName,
     quantity,
+    price: productInfo.price,
     isSelected: true,
     product: {
       name: productInfo.productName,

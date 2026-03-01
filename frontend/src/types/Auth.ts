@@ -53,13 +53,12 @@ export interface ResetPasswordResponse {
   error?: string;
 }
 
-// Register Response
+// Register Response - BE trả { id, email, fullName, role }
 export interface RegisterResponse {
-  success: boolean;
-  message?: string;
-  user?: import("./User").User;
-  accessToken?: string;
-  error?: string;
+  id?: number;
+  email?: string;
+  fullName?: string;
+  role?: string;
 }
 
 // Refresh Token Response

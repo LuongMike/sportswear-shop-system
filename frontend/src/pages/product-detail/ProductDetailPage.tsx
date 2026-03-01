@@ -1,53 +1,23 @@
-import { useParams, useLocation } from "react-router";
-import Container from "@/components/ui/Container";
-import Breadcrumb from "@/components/ui/Breadcrumb";
+// pages/ProductDetailPage.tsx
+import { useParams } from "react-router";
 import { useProductDetail } from "@/hooks/useProductDetail";
-import { getBreadcrumb } from "@/utils/breadCrumbUtils";
 import ProductDetail from "@/components/product-detail/ProductDetail";
-import RelatedProducts from "@/components/product-detail/RelatedProducts";
+import Container from "@/components/ui/Container";
 
 const ProductDetailPage = () => {
   const { slug } = useParams();
-  const location = useLocation();
 
-  const productDetailData = useProductDetail(slug);
-  const { product, loading, error } = productDetailData;
+  // Lấy toàn bộ các trạng thái từ hook
+  const { product, loading, error } = useProductDetail(slug);
+  const productDetail = useProductDetail(slug);
 
-  // Lấy breadcrumb từ state (nếu có)
-  const breadcrumbFromState = location.state?.breadcrumb;
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Container>
-          <div className="py-8 text-center">Đang tải sản phẩm...</div>
-        </Container>
-      </div>
-    );
-  }
-
-  if (error || !product) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Container>
-          <div className="py-8 text-center text-red-600">
-            {error || "Không tìm thấy sản phẩm"}
-          </div>
-        </Container>
-      </div>
-    );
-  }
+  console.log("ProductDetailPage - product:", product);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       <Container>
-        <Breadcrumb items={getBreadcrumb(breadcrumbFromState, product)} />
-
-        {/* Product Detail Content */}
-        <ProductDetail {...productDetailData} />
-
-        {/* Related Products */}
-        {product && <RelatedProducts product={product} />}
+        {/* Truyền đủ 3 props để sửa lỗi TS(2739) */}
+        <ProductDetail {...productDetail} loading={loading} error={error} />
       </Container>
     </div>
   );

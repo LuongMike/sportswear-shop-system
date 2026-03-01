@@ -7,9 +7,15 @@ const FavoriteBrands = () => {
   const [timeLeft, setTimeLeft] = useState("");
   const navigate = useNavigate();
 
-  const { data: brandData } = useBrands();
+  const { data: brandData, isLoading } = useBrands();
 
+  console.log("Brand Data:", brandData);
+
+  // brandData.data.brands là cấu trúc từ useBrands
   const brands = brandData?.data?.brands || [];
+
+  console.log("Brands:", brands);
+  
 
   useEffect(() => {
     const targetDate = new Date("2025-12-25T00:00:00"); // Ngày Noel
@@ -43,17 +49,25 @@ const FavoriteBrands = () => {
       <p className="text-center text-lg text-red-500 mb-4">
         Thời gian còn lại: {timeLeft}
       </p>
-      <div className=" grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2  gap-2 ">
-        {brands.slice(0, 4).map((brand) => (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-2">
+        {isLoading ? (
+          <div className="col-span-2 text-center py-8 text-gray-500">
+            Đang tải thương hiệu...
+          </div>
+        ) : brands.length === 0 ? (
+          <div className="col-span-2 text-center py-8 text-gray-500">
+            Không có thương hiệu nào
+          </div>
+        ) : brands.slice(0, 4).map((brand) => (
           <div
             key={brand.id}
             className="flex relative flex-col items-center group overflow-hidden"
           >
             <img
               src={
-                brand.logo || `https://placehold.co/700x300?text=${brand.name}`
+                brand.logo || `https://placehold.co/700x300?text=${brand.brandName}`
               }
-              alt={brand.name}
+              alt={brand.brandName}
               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
             <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
