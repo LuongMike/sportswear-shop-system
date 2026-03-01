@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class ProductReview {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -26,6 +27,10 @@ public class ProductReview {
 
     private int rating;
 
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "order_item_id")
+    private OrderItem orderItem;
+
     @Column(columnDefinition = "TEXT")
     private String comment;
 
@@ -35,4 +40,6 @@ public class ProductReview {
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
     }
+
+
 }

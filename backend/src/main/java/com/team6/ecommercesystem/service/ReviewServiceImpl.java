@@ -5,52 +5,89 @@ import com.team6.ecommercesystem.dto.response.ReviewResponse;
 import com.team6.ecommercesystem.model.Product;
 import com.team6.ecommercesystem.model.ProductReview;
 import com.team6.ecommercesystem.model.User;
-import com.team6.ecommercesystem.repository.ProductRepository;
+import com.team6.ecommercesystem.model.OrderItem;
 import com.team6.ecommercesystem.repository.ProductReviewRepository;
-import com.team6.ecommercesystem.repository.UserRepository;
-import jakarta.transaction.Transactional;
-import lombok.RequiredArgsConstructor;
+import com.team6.ecommercesystem.repository.ProductRepository;
+import com.team6.ecommercesystem.repository.OrderRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 public class ReviewServiceImpl implements ReviewService {
-    private final ProductReviewRepository reviewRepository;
-    private final UserRepository userRepository;
-    private final ProductRepository productRepository;
+
+    @Autowired
+    private ProductReviewRepository reviewRepository;
+
+    @Autowired
+    private ProductRepository productRepository;
+
+    @Autowired
+    private OrderRepository orderItemRepository;
 
     @Override
     @Transactional
-    public ReviewResponse submitReview(Long userId, ReviewRequest request) {
-        // 1. Validate content (Logic từ Activity Diagram)
-        if (request.rating() < 1 || request.rating() > 5 || request.comment().isBlank()) {
-            throw new RuntimeException("Validation Error: Invalid rating or empty comment");
+    public ReviewResponse submitReview(ReviewRequest request, User currentUser) {
+        // 1. Tìm OrderItem và kiểm tra tồn tại
+        OrderItem orderItem = orderItemRepository.findById(request.getOrderItemId())
+                .orElseThrow(() -> new RuntimeException("Validation Error: Không tìm thấy sản phẩm trong đơn hàng."));
+
+        // 2. Kiểm tra quyền sở hữu: OrderItem phải thuộc về User đang đăng nhập
+        if (!orderItem.getOrder().getUser().getId().equals(currentUser.getId())) {
+            throw new RuntimeException("Validation Error: Bạn chỉ có thể đánh giá sản phẩm bạn đã mua.");
         }
 
-        User user = userRepository.findById(userId).orElseThrow();
-        Product product = productRepository.findById(request.productId()).orElseThrow();
+        // 3. Validate nội dung: Rating từ 1-5 (Bước Is review valid?)
+        if (request.getRating() < 1 || request.getRating() > 5) {
+            throw new RuntimeException("Validation Error: Số sao đánh giá phải từ 1 đến 5.");
+        }
 
-        // 2. Save review
+        // 4. Lấy Product từ Variant (Vì OrderItem liên kết qua ProductVariant)
+        Product product = orderItem.getVariant().getProduct();
+
+        // 5. Lưu đánh giá (Bước Save review)
         ProductReview review = new ProductReview();
-        review.setUser(user);
         review.setProduct(product);
-        review.setRating(request.rating());
-        review.setComment(request.comment());
+        review.setUser(currentUser);
+        review.setOrder(orderItem);
+        review.setRating(request.getRating());
+        review.setComment(request.getComment());
 
-        ProductReview saved = reviewRepository.save(review);
+        ProductReview savedReview = reviewRepository.save(review);
 
-        // 3. Return Response (Publish review)
-        return new ReviewResponse(saved.getId(), user.getFullName(),
-                saved.getRating(), saved.getComment(), saved.getCreatedAt());
+        // 6. Cập nhật Rating trung bình (Update Product Summary)
+        updateProductRating(product.getId());
+
+        return convertToResponse(savedReview);
     }
 
     @Override
-    public List<ReviewResponse> getReviewsByProduct(Long productId) {
-        return reviewRepository.findByProductId(productId).stream()
-                .map(r -> new ReviewResponse(r.getId(), r.getUser().getFullName(),
-                        r.getRating(), r.getComment(), r.getCreatedAt()))
-                .toList();
+    public List<ReviewResponse> getReviewsByProductId(Long productId) {
+        List<ProductReview> reviews = reviewRepository.findByProductId(productId);
+        return reviews.stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
+    }
+
+    private void updateProductRating(Long productId) {
+        Double averageRating = reviewRepository.calculateAverageRating(productId);
+        Product product = productRepository.findById(productId).orElseThrow();
+        product.setAverageRating(averageRating);
+        productRepository.save(product);
+    }
+
+    private ReviewResponse convertToResponse(ProductReview review) {
+        ReviewResponse response = new ReviewResponse();
+        response.setId(review.getId());
+        response.setUserName(review.getUser().getFullName());
+        response.setRating(review.getRating());
+        response.setComment(review.getComment());
+        response.setCreatedAt(review.getCreatedAt());
+        // Nhãn Verified Purchase là true vì chúng ta đã check OrderItem ở trên
+        response.setVerified(true);
+        return response;
     }
 }
