@@ -34,21 +34,31 @@ public class ProductServiceImpl implements ProductService{
     @Override
     public ProductDetailResponse createProduct(ProductRequest request) {
 
+        Long categoryId = categoryRepository.findIdByCategoryName(request.getCategoryName());
+        Long brandId = brandRepository.findIdByBrandName(request.getBrandName());
+        Long sportId = sportRepository.findIdBySportName(request.getSportName());
+
         Product product = Product.builder()
                 .productName(request.getProductName())
                 .description(request.getDescription())
-                .category(categoryRepository.findById(request.getCategoryId())
-                        .orElseThrow(() ->
-                                new NoSuchElementException("Không tìm thấy Category với ID: "
-                                        + request.getCategoryId())))
-                .brand(brandRepository.findById(request.getBrandId())
-                        .orElseThrow(() ->
-                                new NoSuchElementException("Không tìm thấy Brand với ID: "
-                                        + request.getBrandId())))
-                .sport(sportRepository.findById(request.getSportId())
-                        .orElseThrow(() ->
-                                new NoSuchElementException("Không tìm thấy Sport với ID: "
-                                        + request.getSportId())))
+                .category(
+                        categoryRepository.findById(categoryId)
+                                .orElseThrow(() ->
+                                        new NoSuchElementException("Không tìm thấy Category với ID: " + categoryId)
+                                )
+                )
+                .brand(
+                        brandRepository.findById(brandId)
+                                .orElseThrow(() ->
+                                        new NoSuchElementException("Không tìm thấy Brand với ID: " + brandId)
+                                )
+                )
+                .sport(
+                        sportRepository.findById(sportId)
+                                .orElseThrow(() ->
+                                        new NoSuchElementException("Không tìm thấy Sport với ID: " + sportId)
+                                )
+                )
                 .build();
 
         Set<ProductVariant> variants = request.getVariants().stream().map(vReq -> {
@@ -112,16 +122,76 @@ public class ProductServiceImpl implements ProductService{
     @Transactional
     @Override
     public ProductSummaryResponse updateProduct(Long id, ProductRequest request) {
-        Product p = productRepository.findById(id).orElseThrow();
+
+        Long categoryId = categoryRepository.findIdByCategoryName(request.getCategoryName());
+        Long brandId = brandRepository.findIdByBrandName(request.getBrandName());
+        Long sportId = sportRepository.findIdBySportName(request.getSportName());
+
+        Product p = productRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("Không tìm thấy product"));
+
+        // ===== Update product info =====
         p.setProductName(request.getProductName());
         p.setDescription(request.getDescription());
-        p.setCategory(categoryRepository.findById(request.getCategoryId())
-                .orElseThrow(() -> new NoSuchElementException("Không tìm thấy Category với ID: " + request.getCategoryId())));
-        p.setBrand(brandRepository.findById(request.getBrandId())
-                .orElseThrow(() -> new NoSuchElementException("Không tìm thấy Brand với ID: " + request.getBrandId())));
-        p.setSport(sportRepository.findById(request.getSportId())
-                .orElseThrow(() -> new NoSuchElementException("Không tìm thấy Sport với ID: " + request.getSportId())));
-        return ProductMapper.toSummaryDto(productRepository.save(p));
+
+        p.setCategory(categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new NoSuchElementException("Không tìm thấy Category với ID: " + categoryId)));
+
+        p.setBrand(brandRepository.findById(brandId)
+                .orElseThrow(() -> new NoSuchElementException("Không tìm thấy Brand với ID: " + brandId)));
+
+        p.setSport(sportRepository.findById(sportId)
+                .orElseThrow(() -> new NoSuchElementException("Không tìm thấy Sport với ID: " + sportId)));
+
+        // ===== Clear variants cũ =====
+        p.getVariants().clear();
+
+        // ===== Thêm lại variants mới =====
+        if (request.getVariants() != null && !request.getVariants().isEmpty()) {
+
+            for (VariantRequest vReq : request.getVariants()) {
+
+                String sku = (vReq.getSku() == null || vReq.getSku().isBlank())
+                        ? SkuGenerator.generateSku(
+                        p.getProductName(),
+                        vReq.getColor(),
+                        vReq.getSize())
+                        : vReq.getSku();
+
+                ProductVariant variant = ProductVariant.builder()
+                        .sku(sku)
+                        .size(vReq.getSize())
+                        .color(vReq.getColor())
+                        .price(vReq.getPrice())
+                        .stockQuantity(vReq.getStockQuantity())
+                        .product(p)
+                        .build();
+
+                // ===== Images =====
+                if (vReq.getImageUrls() != null && !vReq.getImageUrls().isEmpty()) {
+
+                    Set<ProductImage> images = new HashSet<>();
+
+                    for (int i = 0; i < vReq.getImageUrls().size(); i++) {
+                        images.add(
+                                ProductImage.builder()
+                                        .imageUrl(vReq.getImageUrls().get(i))
+                                        .variant(variant)
+                                        .isPrimary(i == 0)
+                                        .build()
+                        );
+                    }
+
+                    variant.setImages(images);
+                }
+
+                p.getVariants().add(variant);
+            }
+        }
+
+        Product saved = productRepository.save(p);
+
+        return ProductMapper.toSummaryDto(saved);
     }
 
     @Transactional

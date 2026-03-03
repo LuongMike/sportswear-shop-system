@@ -235,7 +235,6 @@ const CheckoutPage = () => {
         fetchCart();
         navigate("/account/orders");
       } else if (paymentMethod === "VNPAY" && orderId) {
-        // Gọi API lấy paymentUrl (trả về string)
         const paymentUrl = await PaymentAPI.getPaymentUrl(orderId);
         if (typeof paymentUrl === "string" && paymentUrl.startsWith("http")) {
           window.location.href = paymentUrl;
@@ -495,8 +494,8 @@ const CheckoutPage = () => {
                           {item.product?.name ?? item.productName}
                         </p>
                         <p className="text-gray-500 text-xs">
-                          {item.variant?.color?.name ?? "N/A"} /{" "}
-                          {item.variant?.size?.name ?? "N/A"}
+                          {item.color ?? "N/A"} /{" "}
+                          {item.size ?? "N/A"}
                         </p>
                         <div className="flex justify-between mt-1">
                           <span className="text-gray-500">

@@ -40,6 +40,14 @@ function saveLocalCart(cart: CartResponse): void {
   }
 }
 
+export function clearLocalCart(): void {
+  try {
+    localStorage.removeItem(CART_STORAGE_KEY);
+  } catch (e) {
+    console.warn("Failed to clear local cart", e);
+  }
+}
+
 /**
  * Thêm sản phẩm vào giỏ local (khi API lỗi)
  */

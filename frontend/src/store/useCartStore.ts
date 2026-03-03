@@ -7,9 +7,11 @@ import {
   updateLocalCartItem,
   removeLocalCartItem,
   isLocalCart,
+  clearLocalCart,
 } from "@/data/mockCart";
 import type { AddToCartProductInfo } from "@/data/mockCart";
 import { toast } from "sonner";
+import { useAuthStore } from "@/store/useAuthStore";
 
 interface CartState {
   cart: CartResponse | null;
@@ -39,12 +41,13 @@ export const useCartStore = create<CartState>((set, get) => ({
       const res = await cartApi.getCart();
       if (res.success) {
         set({ cart: res.data });
+      } else {
+        set({ cart: null });
       }
     } catch {
-      const localCart = getLocalCart();
-      if (localCart.items.length > 0) {
-        set({ cart: localCart });
-      }
+      // Nếu gọi API giỏ hàng lỗi (ví dụ chưa đăng nhập) thì không dùng lại giỏ hàng local
+      // để tránh trường hợp sau khi đăng xuất vẫn còn sản phẩm cũ trong giỏ
+      set({ cart: null });
     } finally {
       set({ isLoading: false });
     }
@@ -139,3 +142,28 @@ export const useCartStore = create<CartState>((set, get) => ({
     }
   },
 }));
+
+// Lắng nghe thay đổi auth:
+// - Khi đăng xuất: reset giỏ + xoá local cart
+// - Khi đăng nhập: gọi lại API giỏ hàng 1 lần
+useAuthStore.subscribe(
+  (state) => state.accessToken,
+  (accessToken, previousAccessToken) => {
+    // Đăng xuất
+    if (!accessToken && previousAccessToken) {
+      clearLocalCart();
+      useCartStore.setState({
+        cart: null,
+        isLoading: false,
+        isAdding: false,
+        updatingItems: [],
+      });
+    }
+
+    // Vừa đăng nhập (trước đó chưa có token)
+    if (accessToken && !previousAccessToken) {
+      const { fetchCart } = useCartStore.getState();
+      fetchCart();
+    }
+  },
+);

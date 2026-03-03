@@ -14,19 +14,16 @@ import {
 import { toast } from "sonner";
 
 const AuthDialog = () => {
-  const { user, clearState } = useAuthStore();
+  const { user, logout } = useAuthStore();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    console.log("Logout clicked - User before:", user);
-    clearState();
-
-    // Delay navigation để đảm bảo state được clear
-    setTimeout(() => {
-      console.log("After clearState - User:", useAuthStore.getState().user);
-      toast.success("Đăng xuất thành công!");
-      navigate("/");
-    }, 50);
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error("Logout error:", error);
+      toast.error("Đăng xuất thất bại, vui lòng thử lại");
+    }
   };
 
   return (

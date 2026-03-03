@@ -69,6 +69,8 @@ function normalizeCart(raw: unknown): { success: boolean; data: CartResponse } {
 export const cartApi = {
   getCart: async () => {
     const response = await api.get("/api/cart");
+    console.log("my cart", response.data);
+    
     const raw = response.data?.data ?? response.data;
     return normalizeCart(raw ?? { items: [], total: 0 });
   },

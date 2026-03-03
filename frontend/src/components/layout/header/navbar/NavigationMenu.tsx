@@ -26,6 +26,9 @@ const NavigationMenu = () => {
       .replace(/\s+/g, "-");
   };
 
+  console.log("navigationData", navigationData);
+  
+
   // LOGIC QUAN TRỌNG: Tạo URL kèm ID để useProductPageLogic có thể đọc
   const getLinkHref = (navItem: any, item: any) => {
     const parentName = navItem.categoryName.toLowerCase();
@@ -92,16 +95,11 @@ const NavigationMenu = () => {
                   </NavigationMenuTrigger>
 
                   <NavigationMenuContent>
-                    <div className="w-full px-8 py-8 bg-white">
-                      <div
-                        className="grid gap-8 container mx-auto"
-                        style={{
-                          gridTemplateColumns: `repeat(${navItem.children.length}, minmax(0, 1fr))`,
-                        }}
-                      >
+                    <div className="w-screen max-w-6xl px-6 py-6 bg-white mx-auto overflow-x-auto">
+                      <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                         {navItem.children.map((column: any) => (
                           <div key={column.id} className="space-y-4">
-                            <h3 className="text-base font-bold text-black uppercase tracking-wider border-b border-gray-200 pb-2">
+                            <h3 className="text-base font-bold text-black uppercase tracking-wider border-b border-gray-200 pb-2 break-words">
                               <NavigationMenuLink asChild>
                                 <Link to={getLinkHref(navItem, column)}>
                                   {column.categoryName}
@@ -123,7 +121,7 @@ const NavigationMenu = () => {
                                       <NavigationMenuLink asChild>
                                         <Link
                                           to={getLinkHref(navItem, item)}
-                                          className="block text-sm text-gray-600 hover:text-red-500 transition-colors"
+                                          className="block text-sm text-gray-600 hover:text-red-500 transition-colors break-words"
                                         >
                                           {item.categoryName}
                                         </Link>

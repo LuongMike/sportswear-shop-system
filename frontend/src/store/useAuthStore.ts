@@ -4,6 +4,7 @@ import api from "@/lib/axios";
 import { toast } from "sonner";
 import type { AuthState } from "@/types/store";
 import type { RegisterResponse } from "@/types/Auth";
+import AuthAPI from "@/services/api";
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -78,6 +79,11 @@ export const useAuthStore = create<AuthState>()(
               loading: false,
             });
             toast.success("Đăng nhập thành công!");
+
+            // Reload lại toàn bộ trang sau khi đăng nhập thành công
+            if (typeof window !== "undefined") {
+              window.location.reload();
+            }
           }
           return data;
         } catch (error) {
@@ -115,11 +121,22 @@ export const useAuthStore = create<AuthState>()(
         }
       },
       logout: async () => {
+        try {
+          await AuthAPI.logout();
+        } catch (error) {
+          console.error("Lỗi gọi API logout:", error);
+        }
+
         get().clearState();
-        
-        useAuthStore.persist.clearStorage(); 
-        
+
+        useAuthStore.persist.clearStorage();
+
         localStorage.removeItem("auth-storage");
+
+        // Reload lại toàn bộ trang sau khi đăng xuất
+        if (typeof window !== "undefined") {
+          window.location.reload();
+        }
       },
       getCurrentUser: async () => {
         try {

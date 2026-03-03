@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { brandApi } from "@/services/brandApi";
-import type { Brand, CreateBrandDTO } from "@/services/brandApi";
+import api from "@/lib/axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +17,46 @@ import { useForm, Controller } from "react-hook-form";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 
+type Brand = {
+  id: number;
+  brandName?: string;
+  name?: string;
+  slug: string;
+  logo?: string | null;
+  description?: string | null;
+  brandBanner?: string | null;
+  banner?: string | null;
+  isActive?: boolean;
+};
+
+type CreateBrandDTO = {
+  name: string;
+  slug: string;
+  logo?: string;
+  description?: string;
+  banner?: string;
+  isActive?: boolean;
+};
+
+const brandAdminApi = {
+  getAll: async (): Promise<Brand[]> => {
+    const res = await api.get("/api/brands");
+    const brands = res.data?.data?.brands ?? res.data?.brands ?? res.data ?? [];
+    return Array.isArray(brands) ? brands : [];
+  },
+  create: async (payload: CreateBrandDTO): Promise<Brand> => {
+    const res = await api.post("/api/brands", payload);
+    return (res.data?.data ?? res.data) as Brand;
+  },
+  update: async (id: number, payload: CreateBrandDTO): Promise<Brand> => {
+    const res = await api.put(`/api/brands/${id}`, payload);
+    return (res.data?.data ?? res.data) as Brand;
+  },
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/api/brands/${id}`);
+  },
+};
+
 export function BrandManager() {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -26,10 +65,10 @@ export function BrandManager() {
   // Fetch Brands
   const { data, isLoading, isError } = useQuery({
     queryKey: ["brands"],
-    queryFn: brandApi.getAll,
+    queryFn: brandAdminApi.getAll,
   });
 
-  const brands = data?.data?.brands || [];
+  const brands: Brand[] = Array.isArray(data) ? data : [];
 
   // Form Handling
   const {
@@ -45,6 +84,7 @@ export function BrandManager() {
       slug: "",
       logo: "",
       description: "",
+      banner: "",
       isActive: true,
     },
   });
@@ -57,6 +97,7 @@ export function BrandManager() {
       slug: "",
       logo: "",
       description: "",
+      banner: "",
       isActive: true,
     });
     setIsDialogOpen(true);
@@ -66,18 +107,19 @@ export function BrandManager() {
   const handleEdit = (brand: Brand) => {
     setEditingBrand(brand);
     reset({
-      name: brand.name,
+      name: brand.brandName ?? brand.name ?? "",
       slug: brand.slug,
       logo: brand.logo || "",
       description: brand.description || "",
-      isActive: brand.isActive,
+      banner: (brand.brandBanner ?? brand.banner) || "",
+      isActive: brand.isActive ?? true,
     });
     setIsDialogOpen(true);
   };
 
   // Create Mutation
   const createMutation = useMutation({
-    mutationFn: brandApi.create,
+    mutationFn: brandAdminApi.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["brands"] });
       toast.success("Tạo thương hiệu thành công");
@@ -91,7 +133,7 @@ export function BrandManager() {
   // Update Mutation
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: CreateBrandDTO }) =>
-      brandApi.update(id, data),
+      brandAdminApi.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["brands"] });
       toast.success("Cập nhật thương hiệu thành công");
@@ -104,7 +146,7 @@ export function BrandManager() {
 
   // Delete Mutation
   const deleteMutation = useMutation({
-    mutationFn: brandApi.delete,
+    mutationFn: (id: number) => brandAdminApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["brands"] });
       toast.success("Xóa thương hiệu thành công");
@@ -168,7 +210,10 @@ export function BrandManager() {
                   Logo
                 </th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                  Tên
+                  Thương hiệu
+                </th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                  Banner
                 </th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                   Slug
@@ -184,12 +229,16 @@ export function BrandManager() {
             <tbody className="[&_tr:last-child]:border-0">
               {brands.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="h-24 text-center">
+                  <td colSpan={7} className="h-24 text-center">
                     Không có dữ liệu.
                   </td>
                 </tr>
               ) : (
                 brands.map((brand) => (
+                  (() => {
+                    const displayName = brand.brandName ?? brand.name ?? "-";
+                    const banner = brand.brandBanner ?? brand.banner ?? "";
+                    return (
                   <tr
                     key={brand.id}
                     className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
@@ -199,7 +248,7 @@ export function BrandManager() {
                       {brand.logo ? (
                         <img
                           src={brand.logo}
-                          alt={brand.name}
+                          alt={displayName}
                           className="h-8 w-8 object-contain rounded-sm border bg-white"
                         />
                       ) : (
@@ -207,7 +256,20 @@ export function BrandManager() {
                       )}
                     </td>
                     <td className="p-4 align-middle font-medium">
-                      {brand.name}
+                      {displayName}
+                    </td>
+                    <td className="p-4 align-middle">
+                      {banner ? (
+                        <div className="h-8 w-20 rounded-sm overflow-hidden border bg-muted">
+                          <img
+                            src={banner}
+                            alt={`${displayName} banner`}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="h-8 w-20 bg-muted rounded-sm" />
+                      )}
                     </td>
                     <td className="p-4 align-middle">{brand.slug}</td>
                     <td className="p-4 align-middle">
@@ -241,6 +303,8 @@ export function BrandManager() {
                       </div>
                     </td>
                   </tr>
+                    );
+                  })()
                 ))
               )}
             </tbody>
@@ -298,6 +362,15 @@ export function BrandManager() {
                 placeholder="Mô tả về thương hiệu..."
                 className="resize-none"
                 {...register("description")}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="banner">Banner URL</Label>
+              <Input
+                id="banner"
+                placeholder="https://example.com/banner.png"
+                {...register("banner")}
               />
             </div>
 

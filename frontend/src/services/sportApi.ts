@@ -2,12 +2,7 @@ import api from "@/lib/axios";
 
 export interface Sport {
   id: number;
-  name: string;
-  slug: string;
-  isActive: boolean;
-  sortOrder: number;
-  createdAt: string;
-  updatedAt: string;
+  sportName: string;
 }
 
 export interface CreateSportDTO {
@@ -26,7 +21,7 @@ export interface UpdateSportDTO {
 
 export const sportApi = {
   getAll: async () => {
-    const response = await api.get<{ data: Sport[] }>("/api/sports");
+    const response = await api.get<{ data: Sport[] }>("/api/admin/sports");
     return response.data;
   },
 

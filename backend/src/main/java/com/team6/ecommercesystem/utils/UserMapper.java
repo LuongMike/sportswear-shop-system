@@ -15,6 +15,7 @@ public class UserMapper {
                 .roleName(user.getRole() != null ? user.getRole().getRoleName() : "N/A")
                 .status(user.getStatus())
                 .lastLoginDate(user.getLastLoginDate())
+                .lockTime(user.getLockTime())
                 .build();
     }
 

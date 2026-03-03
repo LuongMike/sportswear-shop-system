@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { sportApi } from "@/services/sportApi";
-import type { Sport, CreateSportDTO } from "@/services/sportApi";
+import api from "@/lib/axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,9 +12,38 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Pencil, Trash2, Plus, Loader2 } from "lucide-react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { Checkbox } from "@/components/ui/checkbox";
+
+type Sport = {
+  id: number;
+  sportName: string;
+  description?: string | null;
+};
+
+type SportRequest = {
+  sportName: string;
+  description?: string;
+};
+
+const sportAdminApi = {
+  getAll: async (): Promise<Sport[]> => {
+    const res = await api.get("/api/admin/sports");
+    const data = res.data?.data ?? res.data ?? [];
+    return Array.isArray(data) ? data : [];
+  },
+  create: async (payload: SportRequest): Promise<Sport> => {
+    const res = await api.post("/api/admin/sports", payload);
+    return (res.data?.data ?? res.data) as Sport;
+  },
+  update: async (id: number, payload: SportRequest): Promise<Sport> => {
+    const res = await api.put(`/api/admin/sports/${id}`, payload);
+    return (res.data?.data ?? res.data) as Sport;
+  },
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/api/admin/sports/${id}`);
+  },
+};
 
 export function SportManager() {
   const queryClient = useQueryClient();
@@ -25,10 +53,10 @@ export function SportManager() {
   // Fetch Sports
   const { data, isLoading, isError } = useQuery({
     queryKey: ["sports"],
-    queryFn: sportApi.getAll,
+    queryFn: sportAdminApi.getAll,
   });
 
-  const sports = data?.data || [];
+  const sports = data ?? [];
 
   // Form Handling
   const {
@@ -36,21 +64,18 @@ export function SportManager() {
     handleSubmit,
     reset,
     // setValue,
-    control,
     formState: { errors },
-  } = useForm<CreateSportDTO>({
+  } = useForm<SportRequest & { isActive?: boolean; sortOrder?: number; slug?: string; name?: string }>({
     defaultValues: {
-      name: "",
-      slug: "",
-      isActive: true,
-      sortOrder: 0,
+      sportName: "",
+      description: "",
     },
   });
 
   // Open Create Dialog
   const handleCreate = () => {
     setEditingSport(null);
-    reset({ name: "", slug: "", isActive: true, sortOrder: 0 });
+    reset({ sportName: "", description: "" });
     setIsDialogOpen(true);
   };
 
@@ -58,17 +83,15 @@ export function SportManager() {
   const handleEdit = (sport: Sport) => {
     setEditingSport(sport);
     reset({
-      name: sport.name,
-      slug: sport.slug,
-      isActive: sport.isActive,
-      sortOrder: sport.sortOrder,
+      sportName: sport.sportName,
+      description: (sport.description ?? "") as string,
     });
     setIsDialogOpen(true);
   };
 
   // Create Mutation
   const createMutation = useMutation({
-    mutationFn: sportApi.create,
+    mutationFn: (payload: SportRequest) => sportAdminApi.create(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sports"] });
       toast.success("Tạo môn thể thao thành công");
@@ -81,8 +104,8 @@ export function SportManager() {
 
   // Update Mutation
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: CreateSportDTO }) =>
-      sportApi.update(id, data),
+    mutationFn: ({ id, data }: { id: number; data: SportRequest }) =>
+      sportAdminApi.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sports"] });
       toast.success("Cập nhật môn thể thao thành công");
@@ -95,7 +118,7 @@ export function SportManager() {
 
   // Delete Mutation
   const deleteMutation = useMutation({
-    mutationFn: sportApi.delete,
+    mutationFn: (id: number) => sportAdminApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sports"] });
       toast.success("Xóa môn thể thao thành công");
@@ -105,11 +128,15 @@ export function SportManager() {
     },
   });
 
-  const onSubmit = (data: CreateSportDTO) => {
+  const onSubmit = (data: any) => {
+    const payload: SportRequest = {
+      sportName: data.sportName,
+      description: data.description,
+    };
     if (editingSport) {
-      updateMutation.mutate({ id: editingSport.id, data });
+      updateMutation.mutate({ id: editingSport.id, data: payload });
     } else {
-      createMutation.mutate(data);
+      createMutation.mutate(payload);
     }
   };
 
@@ -156,16 +183,10 @@ export function SportManager() {
                   ID
                 </th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                  Tên
+                  Tên bộ môn
                 </th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                  Slug
-                </th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                  Thứ tự
-                </th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                  Trạng thái
+                  Mô tả
                 </th>
                 <th className="h-12 px-4 text-right align-middle font-medium text-muted-foreground">
                   Hành động
@@ -175,7 +196,7 @@ export function SportManager() {
             <tbody className="[&_tr:last-child]:border-0">
               {sports.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="h-24 text-center">
+                  <td colSpan={4} className="h-24 text-center">
                     Không có dữ liệu.
                   </td>
                 </tr>
@@ -187,20 +208,10 @@ export function SportManager() {
                   >
                     <td className="p-4 align-middle">{sport.id}</td>
                     <td className="p-4 align-middle font-medium">
-                      {sport.name}
+                      {sport.sportName}
                     </td>
-                    <td className="p-4 align-middle">{sport.slug}</td>
-                    <td className="p-4 align-middle">{sport.sortOrder}</td>
                     <td className="p-4 align-middle">
-                      <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${
-                          sport.isActive
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
-                        }`}
-                      >
-                        {sport.isActive ? "Active" : "Inactive"}
-                      </span>
+                      {sport.description ?? "-"}
                     </td>
                     <td className="p-4 align-middle text-right">
                       <div className="flex justify-end gap-2">
@@ -238,51 +249,26 @@ export function SportManager() {
           </DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Tên môn thể thao</Label>
+              <Label htmlFor="sportName">Tên môn thể thao</Label>
               <Input
-                id="name"
+                id="sportName"
                 placeholder="Ví dụ: Bóng đá"
-                {...register("name", { required: "Tên là bắt buộc" })}
+                {...register("sportName", { required: "Tên là bắt buộc" })}
               />
-              {errors.name && (
-                <p className="text-sm text-red-500">{errors.name.message}</p>
+              {(errors as any).sportName && (
+                <p className="text-sm text-red-500">
+                  {(errors as any).sportName.message}
+                </p>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="slug">Slug</Label>
+              <Label htmlFor="description">Mô tả</Label>
               <Input
-                id="slug"
-                placeholder="Ví dụ: bong-da"
-                {...register("slug", { required: "Slug là bắt buộc" })}
+                id="description"
+                placeholder="Mô tả môn thể thao..."
+                {...register("description")}
               />
-              {errors.slug && (
-                <p className="text-sm text-red-500">{errors.slug.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="sortOrder">Thứ tự hiển thị</Label>
-              <Input
-                id="sortOrder"
-                type="number"
-                {...register("sortOrder", { valueAsNumber: true })}
-              />
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Controller
-                name="isActive"
-                control={control}
-                render={({ field }) => (
-                  <Checkbox
-                    id="isActive"
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                )}
-              />
-              <Label htmlFor="isActive">Kích hoạt</Label>
             </div>
 
             <DialogFooter>

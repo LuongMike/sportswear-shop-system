@@ -22,10 +22,7 @@ export default function AdminDashboard() {
   const handleLogout = async () => {
     try {
       console.log("Đang tiến hành logout...");
-      await logout(); 
-      
-      localStorage.clear(); 
-       window.location.href = "/";
+      await logout();
     } catch (error) {
       console.error("Lỗi khi logout:", error);
     }

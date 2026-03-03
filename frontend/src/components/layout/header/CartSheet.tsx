@@ -86,8 +86,8 @@ const CartSheet = () => {
                           {item.product?.name ?? item.productName}
                         </h3>
                         <div className="text-sm text-gray-500 mb-2">
-                          {item.variant?.color?.name ?? ""} /{" "}
-                          {item.variant?.size?.name ?? ""}
+                          {item.color ?? ""} /{" "}
+                          {item.size ?? ""}
                         </div>
                         <div className="font-bold text-gray-900">
                           {formatCurrency(

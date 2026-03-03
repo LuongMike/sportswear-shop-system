@@ -101,16 +101,40 @@ const ProductInfo = ({
   };
 
   const handleAddToCart = async () => {
+    if (!selectedColorId) {
+      toast.error("Vui lòng chọn màu sắc");
+      return;
+    }
+    if (!selectedSize) {
+      toast.error("Vui lòng chọn kích thước");
+      return;
+    }
     if (!currentVariant) {
-      toast.error("Vui lòng chọn màu sắc và kích thước");
+      toast.error("Vui lòng chọn đầy đủ màu sắc và kích thước");
+      return;
+    }
+    if (qty <= 0) {
+      toast.error("Số lượng phải lớn hơn 0");
       return;
     }
     await addToCart(currentVariant.id, qty, getProductInfoForCart());
   };
 
   const handleBuyNow = async () => {
+    if (!selectedColorId) {
+      toast.error("Vui lòng chọn màu sắc");
+      return;
+    }
+    if (!selectedSize) {
+      toast.error("Vui lòng chọn kích thước");
+      return;
+    }
     if (!currentVariant) {
-      toast.error("Vui lòng chọn màu sắc và kích thước");
+      toast.error("Vui lòng chọn đầy đủ màu sắc và kích thước");
+      return;
+    }
+    if (qty <= 0) {
+      toast.error("Số lượng phải lớn hơn 0");
       return;
     }
     await addToCart(currentVariant.id, qty, getProductInfoForCart());

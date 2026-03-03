@@ -13,8 +13,8 @@ import java.util.List;
 public class ProductRequest {
     private String productName;
     private String description;
-    private Long categoryId;
-    private Long brandId;
-    private Long sportId;
+    private String categoryName;
+    private String brandName;
+    private String sportName;
     private List<VariantRequest> variants;
 }

@@ -2,14 +2,12 @@ import api from "@/lib/axios";
 
 export interface Brand {
   id: number;
-  name: string;
+  brandName: string;
   slug: string;
   logo: string | null;
   description: string | null;
-  banner: string | null;
+  brandBanner: string | null;
   isActive: boolean;
-  createdAt?: string;
-  updatedAt?: string;
 }
 
 export interface CreateBrandDTO {

@@ -87,7 +87,13 @@ const ProductFilters = ({ filters, onFiltersChange }: ProductFiltersProps) => {
     });
   };
 
-  const hasActiveFilters = !!(filters.search || filters.minPrice !== undefined || filters.maxPrice !== undefined || filters.brandId || filters.color);
+  const hasActiveFilters = !!(
+    filters.search ||
+    filters.minPrice !== undefined ||
+    filters.maxPrice !== undefined ||
+    filters.brandId ||
+    filters.color
+  );
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
@@ -139,17 +145,20 @@ const ProductFilters = ({ filters, onFiltersChange }: ProductFiltersProps) => {
         <h4 className="font-medium mb-3">Khoảng giá</h4>
         <div className="space-y-2">
           {PRICE_RANGES.map((range) => {
-            const isSelected = filters.minPrice === range.min && filters.maxPrice === range.max;
+            const isSelected =
+              filters.minPrice === range.min && filters.maxPrice === range.max;
             return (
               <div key={range.id} className="flex items-center space-x-2">
                 <Checkbox
                   id={range.id}
                   checked={isSelected}
-                  onCheckedChange={() => handlePriceChange(range.min, range.max)}
+                  onCheckedChange={() =>
+                    handlePriceChange(range.min, range.max)
+                  }
                 />
                 <Label
                   htmlFor={range.id}
-                  className={`text-sm cursor-pointer ${isSelected ? 'font-medium text-blue-600' : 'font-normal'}`}
+                  className={`text-sm cursor-pointer ${isSelected ? "font-medium text-blue-600" : "font-normal"}`}
                 >
                   {range.label}
                 </Label>
@@ -181,9 +190,9 @@ const ProductFilters = ({ filters, onFiltersChange }: ProductFiltersProps) => {
                   />
                   <Label
                     htmlFor={`brand-${brand.id}`}
-                    className={`text-sm cursor-pointer ${isSelected ? 'font-medium text-blue-600' : 'font-normal'}`}
+                    className={`text-sm cursor-pointer ${isSelected ? "font-medium text-blue-600" : "font-normal"}`}
                   >
-                    {brand.name}
+                    {brand.brandName}
                   </Label>
                 </div>
               );
@@ -215,9 +224,7 @@ const ProductFilters = ({ filters, onFiltersChange }: ProductFiltersProps) => {
           })}
         </div>
         {filters.color && (
-          <p className="text-xs text-blue-600 mt-2">
-            Đã chọn: {filters.color}
-          </p>
+          <p className="text-xs text-blue-600 mt-2">Đã chọn: {filters.color}</p>
         )}
       </div>
 
@@ -229,26 +236,43 @@ const ProductFilters = ({ filters, onFiltersChange }: ProductFiltersProps) => {
             {filters.search && (
               <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">
                 Tìm: {filters.search}
-                <button onClick={() => {
-                  setSearchInput("");
-                  onFiltersChange({ ...filters, search: undefined });
-                }}>
+                <button
+                  onClick={() => {
+                    setSearchInput("");
+                    onFiltersChange({ ...filters, search: undefined });
+                  }}
+                >
                   <X className="h-3 w-3" />
                 </button>
               </span>
             )}
-            {(filters.minPrice !== undefined || filters.maxPrice !== undefined) && (
+            {(filters.minPrice !== undefined ||
+              filters.maxPrice !== undefined) && (
               <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">
-                Giá: {filters.minPrice?.toLocaleString() || 0}đ - {filters.maxPrice?.toLocaleString() || '∞'}đ
-                <button onClick={() => onFiltersChange({ ...filters, minPrice: undefined, maxPrice: undefined })}>
+                Giá: {filters.minPrice?.toLocaleString() || 0}đ -{" "}
+                {filters.maxPrice?.toLocaleString() || "∞"}đ
+                <button
+                  onClick={() =>
+                    onFiltersChange({
+                      ...filters,
+                      minPrice: undefined,
+                      maxPrice: undefined,
+                    })
+                  }
+                >
                   <X className="h-3 w-3" />
                 </button>
               </span>
             )}
             {filters.brandId && (
               <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs">
-                {brands.find(b => b.id === filters.brandId)?.name || 'Thương hiệu'}
-                <button onClick={() => onFiltersChange({ ...filters, brandId: undefined })}>
+                {brands.find((b) => b.id === filters.brandId)?.name ||
+                  "Thương hiệu"}
+                <button
+                  onClick={() =>
+                    onFiltersChange({ ...filters, brandId: undefined })
+                  }
+                >
                   <X className="h-3 w-3" />
                 </button>
               </span>
@@ -257,10 +281,18 @@ const ProductFilters = ({ filters, onFiltersChange }: ProductFiltersProps) => {
               <span className="inline-flex items-center gap-1 px-2 py-1 bg-pink-100 text-pink-700 rounded-full text-xs">
                 <span
                   className="w-3 h-3 rounded-full border border-pink-300"
-                  style={{ backgroundColor: COLORS.find(c => c.name === filters.color)?.hex || '#ccc' }}
+                  style={{
+                    backgroundColor:
+                      COLORS.find((c) => c.name === filters.color)?.hex ||
+                      "#ccc",
+                  }}
                 />
                 {filters.color}
-                <button onClick={() => onFiltersChange({ ...filters, color: undefined })}>
+                <button
+                  onClick={() =>
+                    onFiltersChange({ ...filters, color: undefined })
+                  }
+                >
                   <X className="h-3 w-3" />
                 </button>
               </span>
