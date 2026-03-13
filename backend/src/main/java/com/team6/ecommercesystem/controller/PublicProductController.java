@@ -24,7 +24,7 @@ public class PublicProductController {
     @GetMapping
     @Operation(summary = "Get all products", description = "Lấy danh sách tóm tắt tất cả sản phẩm để hiển thị lên trang chủ")
     public ResponseEntity<List<ProductSummaryResponse>> getAllProducts() {
-        return ResponseEntity.ok(productService.getAllProducts());
+        return ResponseEntity.ok(productService.getActiveProducts());
     }
 
     @GetMapping("/{id}")

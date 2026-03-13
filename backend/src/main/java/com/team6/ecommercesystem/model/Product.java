@@ -38,4 +38,8 @@ public class Product {
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
     private List<ProductVariant> variants;
+
+    @Column(name = "is_active")
+    @Builder.Default
+    private Boolean isActive = true;
 }
