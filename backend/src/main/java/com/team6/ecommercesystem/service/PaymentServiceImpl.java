@@ -6,6 +6,7 @@ import com.team6.ecommercesystem.model.Order;
 import com.team6.ecommercesystem.repository.OrderRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -24,6 +25,13 @@ public class PaymentServiceImpl implements PaymentService {
     public PaymentResponse createVnPayPayment(HttpServletRequest request, Long orderId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        // KIỂM TRA CHỦ SỞ HỮU ĐƠN HÀNG
+        String currentUserIdStr = SecurityContextHolder.getContext().getAuthentication().getName();
+        if (!order.getUser().getId().toString().equals(currentUserIdStr)) {
+            // Ném lỗi ngay nếu ID của người đang đăng nhập khác với ID của người tạo đơn hàng
+            throw new RuntimeException("Bạn không có quyền truy cập hoặc thanh toán đơn hàng này!");
+        }
 
         // Số tiền cần nhân với 100 (VNPay quy định)
         long amount = order.getTotalAmount().multiply(new BigDecimal("100")).longValue();

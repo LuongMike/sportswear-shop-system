@@ -20,4 +20,5 @@ public interface ProductService {
     public VariantResponse updateVariant(Long id, VariantRequest request);
     public void deleteVariant(Long id);
     public void updateStock(Long variantId, Integer quantity);
+    List<ProductSummaryResponse> getActiveProducts();
 }

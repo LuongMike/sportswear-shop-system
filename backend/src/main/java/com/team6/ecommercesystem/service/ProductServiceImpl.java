@@ -84,7 +84,11 @@ public class ProductServiceImpl implements ProductService{
     @Transactional
     @Override
     public void deleteProduct(Long id) {
-        productRepository.deleteById(id);
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("Không tìm thấy sản phẩm"));
+
+        product.setIsActive(false); // Ẩn sản phẩm
+        productRepository.save(product);
     }
 
     @Transactional
@@ -127,5 +131,13 @@ public class ProductServiceImpl implements ProductService{
         ProductVariant v = variantRepository.findById(variantId).orElseThrow();
         v.setStockQuantity(quantity);
         variantRepository.save(v);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public List<ProductSummaryResponse> getActiveProducts() {
+        return productRepository.findByIsActiveTrue().stream()
+                .map(ProductMapper::toSummaryDto)
+                .collect(Collectors.toList());
     }
 }
