@@ -25,6 +25,9 @@ public class ProductVariant {
     private BigDecimal price;
     private Integer stockQuantity;
 
+    @Version
+    private Long version;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id")
     private Product product;
