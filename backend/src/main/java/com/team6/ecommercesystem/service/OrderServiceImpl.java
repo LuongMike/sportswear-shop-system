@@ -9,7 +9,7 @@ import com.team6.ecommercesystem.repository.*;
 import com.team6.ecommercesystem.utils.OrderMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Service;import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -119,6 +119,7 @@ public class OrderServiceImpl implements  OrderService {
     }
 
     @Override
+    @Transactional
     public OrderResponse updateOrderStatus(Long orderId, OrderStatus newStatus) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
@@ -129,10 +130,11 @@ public class OrderServiceImpl implements  OrderService {
         OrderStatus currentStatus = order.getStatus();
         PaymentMethod paymentMethod = order.getPaymentMethod();
 
+        // --- KIỂM TRA QUYỀN VÀ LUỒNG TRẠNG THÁI ---
         if (roleCode.equals("SHIPPER")){
             boolean isValidTransition = false;
 
-            //1. Lấy hàng đi giao
+            // 1. Lấy hàng đi giao
             if (newStatus == OrderStatus.SHIPPED) {
                 if (paymentMethod == PaymentMethod.COD && currentStatus == OrderStatus.PENDING) isValidTransition = true;
                 if (paymentMethod != PaymentMethod.COD && currentStatus == OrderStatus.PAID) isValidTransition = true;
@@ -148,6 +150,17 @@ public class OrderServiceImpl implements  OrderService {
             }
         } else if (!roleCode.equals("ADMIN")) {
             throw new RuntimeException("Bạn không có quyền cập nhật trạng thái đơn hàng");
+        }
+
+        // --- FIX LỖI 2: HOÀN LẠI KHO NẾU ĐƠN BỊ HỦY ---
+        // Nếu người dùng/admin/shipper chuyển trạng thái thành CANCELLED và đơn này trước đó chưa hủy
+        if (newStatus == OrderStatus.CANCELLED && currentStatus != OrderStatus.CANCELLED) {
+            order.getOrderItems().forEach(item -> {
+                ProductVariant variant = item.getVariant();
+                // Cộng lại số lượng lúc khách đặt trả về kho
+                variant.setStockQuantity(variant.getStockQuantity() + item.getQuantity());
+                variantRepository.save(variant);
+            });
         }
         // Cập nhật và lưu
         order.setStatus(newStatus);
