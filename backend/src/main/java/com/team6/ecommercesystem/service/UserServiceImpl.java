@@ -15,6 +15,10 @@ import com.team6.ecommercesystem.repository.ValidRefreshTokenRepository;
 import com.team6.ecommercesystem.utils.UserMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -48,10 +52,15 @@ public class UserServiceImpl implements UserService{
 
     @Override
     @Transactional(readOnly = true)
-    public List<UserSummaryResponse> getAllUsers() {
-        return userRepository.findAll().stream()
-                .map(UserMapper::toSummaryDto)
-                .collect(Collectors.toList());
+    public Page<UserSummaryResponse> getAllUsers(int page, int size, String sortBy, String sortDir, String keyword) {
+        Sort sort = sortDir.equalsIgnoreCase(Sort.Direction.ASC.name())
+                ? Sort.by(sortBy).ascending()
+                : Sort.by(sortBy).descending();
+
+        Pageable pageable = PageRequest.of(page, size, sort);
+        Page<User> users = userRepository.searchUsers(keyword, pageable);
+
+        return users.map(UserMapper::toSummaryDto);
     }
 
     @Override

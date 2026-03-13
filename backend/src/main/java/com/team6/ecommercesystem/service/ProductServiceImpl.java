@@ -10,6 +10,10 @@ import com.team6.ecommercesystem.repository.*;
 import com.team6.ecommercesystem.utils.ProductMapper;
 import com.team6.ecommercesystem.utils.SkuGenerator;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -139,5 +143,22 @@ public class ProductServiceImpl implements ProductService{
         return productRepository.findByIsActiveTrue().stream()
                 .map(ProductMapper::toSummaryDto)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public Page<ProductSummaryResponse> getActiveProducts(int page, int size, String sortBy, String sortDir, Long categoryId, String keyword) {
+        // 1. Cấu hình sắp xếp (Sort)
+        Sort sort = sortDir.equalsIgnoreCase(Sort.Direction.ASC.name())
+                ? Sort.by(sortBy).ascending()
+                : Sort.by(sortBy).descending();
+
+        // 2. Tạo đối tượng Pageable (Spring Data tự hiểu để thêm LIMIT và OFFSET vào câu SQL)
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        // 3. Truy vấn DB
+        Page<Product> productPage = productRepository.getActiveProductsWithFilters(categoryId, keyword, pageable);
+
+        // 4. Map sang DTO (Đối tượng Page có sẵn hàm .map() cực kỳ tiện lợi, không cần dùng Stream)
+        return productPage.map(ProductMapper::toSummaryDto);
     }
 }
