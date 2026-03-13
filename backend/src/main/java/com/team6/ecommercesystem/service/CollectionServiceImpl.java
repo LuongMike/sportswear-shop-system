@@ -9,7 +9,12 @@ import com.team6.ecommercesystem.repository.CollectionRepository;
 import com.team6.ecommercesystem.repository.ProductVariantRepository;
 import com.team6.ecommercesystem.utils.CollectionMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -43,10 +48,18 @@ public class CollectionServiceImpl implements CollectionService {
         return CollectionMapper.toResponse(collectionRepository.save(collection));    }
 
     @Override
-    public List<CollectionResponse> getAllCollections() {
-        return collectionRepository.findAll().stream()
-                .map(CollectionMapper::toResponse).collect(Collectors.toList());
+    @Transactional(readOnly = true)
+    public Page<CollectionResponse> getAllCollections(int page, int size, String sortBy, String sortDir, String keyword) {
+        Sort sort = sortDir.equalsIgnoreCase(Sort.Direction.ASC.name())
+                ? Sort.by(sortBy).ascending()
+                : Sort.by(sortBy).descending();
+
+        Pageable pageable = PageRequest.of(page, size, sort);
+        Page<Collection> collections = collectionRepository.searchCollections(keyword, pageable);
+
+        return collections.map(CollectionMapper::toResponse);
     }
+
 
     @Override
     public CollectionResponse getCollectionBySlug(String slug) {
