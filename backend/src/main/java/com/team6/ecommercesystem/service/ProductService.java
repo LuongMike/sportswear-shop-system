@@ -12,7 +12,7 @@ import java.util.List;
 
 public interface ProductService {
     public ProductDetailResponse createProduct(ProductRequest request);
-    public List<ProductSummaryResponse> getAllProducts();
+    Page<ProductSummaryResponse> getAllProducts(int page, int size, String sortBy, String sortDir, Long categoryId, String keyword);
     public ProductDetailResponse getProductDetail(Long id);
     public ProductSummaryResponse updateProduct(Long id, ProductRequest request);
     public void deleteProduct(Long id);
