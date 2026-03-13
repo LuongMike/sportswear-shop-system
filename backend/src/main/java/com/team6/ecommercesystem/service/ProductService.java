@@ -6,6 +6,7 @@ import com.team6.ecommercesystem.dto.response.ProductDetailResponse;
 import com.team6.ecommercesystem.dto.response.ProductSummaryResponse;
 import com.team6.ecommercesystem.dto.response.VariantResponse;
 import com.team6.ecommercesystem.model.ProductVariant;
+import org.springframework.data.domain.Page;
 
 import java.util.List;
 
@@ -21,4 +22,5 @@ public interface ProductService {
     public void deleteVariant(Long id);
     public void updateStock(Long variantId, Integer quantity);
     List<ProductSummaryResponse> getActiveProducts();
+    Page<ProductSummaryResponse> getActiveProducts(int page, int size, String sortBy, String sortDir, Long categoryId, String keyword);
 }
