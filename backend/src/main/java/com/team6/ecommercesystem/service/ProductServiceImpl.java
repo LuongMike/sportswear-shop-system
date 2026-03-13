@@ -60,8 +60,17 @@ public class ProductServiceImpl implements ProductService{
 
     @Transactional(readOnly = true)
     @Override
-    public List<ProductSummaryResponse> getAllProducts() {
-        return productRepository.findAll().stream().map(ProductMapper::toSummaryDto).collect(Collectors.toList());
+    public Page<ProductSummaryResponse> getAllProducts(int page, int size, String sortBy, String sortDir, Long categoryId, String keyword) {
+        Sort sort = sortDir.equalsIgnoreCase(Sort.Direction.ASC.name())
+                ? Sort.by(sortBy).ascending()
+                : Sort.by(sortBy).descending();
+
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        // Gọi câu Query dành riêng cho Admin (không lọc isActive)
+        Page<Product> productPage = productRepository.getAllProductsForAdmin(categoryId, keyword, pageable);
+
+        return productPage.map(ProductMapper::toSummaryDto);
     }
 
     @Transactional(readOnly = true)
