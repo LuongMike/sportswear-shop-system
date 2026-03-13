@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -36,8 +37,14 @@ public class UserController {
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Get All Users", description = "Retrieve summary list of all users")
-    public ResponseEntity<List<UserSummaryResponse>> getAllUsers() {
-        return ResponseEntity.ok(userService.getAllUsers());
+    public ResponseEntity<Page<UserSummaryResponse>> getAllUsers(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir,
+            @RequestParam(required = false) String keyword
+    ) {
+        return ResponseEntity.ok(userService.getAllUsers(page, size, sortBy, sortDir, keyword));
     }
 
     @GetMapping("/{id}")
