@@ -4,7 +4,9 @@ import com.team6.ecommercesystem.model.Order;
 import com.team6.ecommercesystem.model.ProductVariant;
 import com.team6.ecommercesystem.model.enums.OrderStatus;
 import com.team6.ecommercesystem.repository.OrderRepository;
+import com.team6.ecommercesystem.repository.PasswordResetTokenRepository;
 import com.team6.ecommercesystem.repository.ProductVariantRepository;
+import com.team6.ecommercesystem.repository.ValidRefreshTokenRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -20,6 +22,8 @@ import java.util.List;
 public class SystemCleanupTask {
     private final OrderRepository orderRepository;
     private final ProductVariantRepository variantRepository;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final ValidRefreshTokenRepository validRefreshTokenRepository;
 
     /**
      * Chạy tự động mỗi 15 phút (15 * 60 * 1000 = 900000 milliseconds)
@@ -56,5 +60,27 @@ public class SystemCleanupTask {
 
         orderRepository.saveAll(stuckOrders);
         log.info("Hoàn tất dọn dẹp {} đơn hàng bị kẹt.", stuckOrders.size());
+    }
+
+    /**
+     * Tác vụ tự động dọn dẹp Database (Chạy vào 2:00 Sáng mỗi ngày)
+     * Cron format: Giây - Phút - Giờ - Ngày - Tháng - Thứ
+     */
+    @Scheduled(cron = "0 0 2 * * *")
+    public void cleanupExpiredTokens() {
+        log.info("Bắt đầu tác vụ chạy ngầm: Dọn dẹp token rác trong Database...");
+
+        LocalDateTime now = LocalDateTime.now();
+
+        try {
+            // Thực thi xóa và lấy về số lượng bản ghi đã bị xóa
+            int deletedPwdTokens = passwordResetTokenRepository.deleteExpiredTokens(now);
+            int deletedRefreshTokens = validRefreshTokenRepository.deleteExpiredTokens(now);
+
+            log.info("Hoàn tất dọn dẹp DB: Đã dọn {} Password Reset Tokens và {} Refresh Tokens hết hạn.",
+                    deletedPwdTokens, deletedRefreshTokens);
+        } catch (Exception e) {
+            log.error("Có lỗi xảy ra trong quá trình dọn dẹp Token: {}", e.getMessage());
+        }
     }
 }
