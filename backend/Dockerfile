@@ -22,8 +22,8 @@ RUN mvn clean package -B -DskipTests
 FROM eclipse-temurin:21-jre-alpine
 
 # Metadata
-LABEL maintainer="Team 4"
-LABEL description="Laboratory Management Application"
+LABEL maintainer="Team 6"
+LABEL description="Sport Swear Shop Application"
 
 # Cấu hình múi giờ Việt Nam
 ENV TZ=Asia/Ho_Chi_Minh
