@@ -26,7 +26,8 @@ public class ProductVariant {
     private Integer stockQuantity;
 
     @Version
-    private Long version;
+    @Builder.Default
+    private Long version = 0L;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id")
