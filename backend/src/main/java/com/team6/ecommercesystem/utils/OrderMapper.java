@@ -4,6 +4,7 @@ import com.team6.ecommercesystem.dto.response.OrderItemResponse;
 import com.team6.ecommercesystem.dto.response.OrderResponse;
 import com.team6.ecommercesystem.model.Order;
 import com.team6.ecommercesystem.model.OrderItem;
+import com.team6.ecommercesystem.model.ProductImage;
 import com.team6.ecommercesystem.model.ProductVariant;
 
 import java.math.BigDecimal;
@@ -27,9 +28,11 @@ public class OrderMapper {
 
     private static OrderItemResponse toItemResponse(OrderItem item) {
         ProductVariant v = item.getVariant();
-        // Lấy ảnh đầu tiên của variant làm ảnh đại diện, nếu không có thì để chuỗi rỗng
         String imgUrl = (v.getImages() != null && !v.getImages().isEmpty())
-                ? v.getImages().get(0).getImageUrl()
+                ? v.getImages().stream()
+                .findFirst()
+                .map(ProductImage::getImageUrl)
+                .orElse(null)
                 : "";
 
         return OrderItemResponse.builder()

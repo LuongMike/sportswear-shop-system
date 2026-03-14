@@ -42,6 +42,19 @@ public class OrderController {
         return ResponseEntity.ok(orderService.updateOrderStatus(id, status));
     }
 
+    @GetMapping("/admin")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Get all order history")
+    public ResponseEntity<List<OrderResponse>> getAllOrders() {
+        return ResponseEntity.ok(orderService.getAllOrders());
+    }
+
+    @PatchMapping("/{id}/orderStatus")
+    @Operation(summary = "Update my status order")
+    public ResponseEntity<OrderResponse> userUpdateOrderStatus(@PathVariable Long id, @RequestParam OrderStatus status){
+        return ResponseEntity.ok(orderService.userUpdateOrderStatus(id, status));
+    }
+
     @PatchMapping("/{id}/confirm-delivery")
     @Operation(summary = "User xác nhận tình trạng nhận hàng",
             description = "Khách hàng xác nhận đã nhận hàng (isReceived=true) hoặc chưa nhận hàng (isReceived=false)")

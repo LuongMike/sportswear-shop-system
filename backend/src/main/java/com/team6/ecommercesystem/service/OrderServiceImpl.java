@@ -9,7 +9,8 @@ import com.team6.ecommercesystem.repository.*;
 import com.team6.ecommercesystem.utils.OrderMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Service;import org.springframework.transaction.annotation.Transactional;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -119,7 +120,14 @@ public class OrderServiceImpl implements  OrderService {
     }
 
     @Override
-    @Transactional
+    public List<OrderResponse> getAllOrders() {
+        return orderRepository.findAll()
+                .stream()
+                .map(OrderMapper::toResponse)
+                .toList();
+    }
+
+    @Override
     public OrderResponse updateOrderStatus(Long orderId, OrderStatus newStatus) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
@@ -164,6 +172,28 @@ public class OrderServiceImpl implements  OrderService {
         }
         // Cập nhật và lưu
         order.setStatus(newStatus);
+        return OrderMapper.toResponse(orderRepository.save(order));
+    }
+
+    @Override
+    public OrderResponse userUpdateOrderStatus(Long orderId, OrderStatus status) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng"));
+
+        User currentUser = getCurrentUser();
+        OrderStatus currentStatus = order.getStatus();
+
+        if (currentStatus != OrderStatus.DELIVERED) {
+            throw new RuntimeException("Trạng thái đơn hàng hiện tại không cho phép cập nhật.");
+        }
+
+        if (status == OrderStatus.CANCELLED || status == OrderStatus.COMPLETED) {
+            order.setStatus(status);
+            orderRepository.save(order);
+        } else {
+            throw new RuntimeException("Trạng thái cập nhật không hợp lệ (Chỉ được phép Hủy hoặc Xác nhận đã nhận hàng)");
+        }
+
         return OrderMapper.toResponse(orderRepository.save(order));
     }
 

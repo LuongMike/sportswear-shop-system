@@ -4,6 +4,7 @@ import com.team6.ecommercesystem.dto.response.CartItemResponse;
 import com.team6.ecommercesystem.dto.response.CartResponse;
 import com.team6.ecommercesystem.model.Cart;
 import com.team6.ecommercesystem.model.CartItem;
+import com.team6.ecommercesystem.model.ProductImage;
 import com.team6.ecommercesystem.model.ProductVariant;
 
 import java.math.BigDecimal;
@@ -23,7 +24,11 @@ public class CartMapper {
         ProductVariant v = item.getVariant();
         String imgUrl = (v.getImages() == null || v.getImages().isEmpty())
                 ? ""
-                : v.getImages().get(0).getImageUrl();
+                : v.getImages()
+                .stream()
+                .findFirst()
+                .map(ProductImage::getImageUrl)
+                .orElse(null);
 
         return CartItemResponse.builder()
                 .id(item.getId())

@@ -7,6 +7,7 @@ import com.team6.ecommercesystem.model.Product;
 import com.team6.ecommercesystem.model.ProductImage;
 import com.team6.ecommercesystem.model.ProductVariant;
 
+import java.math.BigDecimal;
 import java.util.stream.Collectors;
 
 public class ProductMapper {
@@ -27,12 +28,35 @@ public class ProductMapper {
     }
 
     public static ProductSummaryResponse toSummaryDto(Product product) {
+        BigDecimal price = BigDecimal.ZERO;
+        String imageUrl = null;
+
+        if (!product.getVariants().isEmpty()) {
+
+            ProductVariant variant = product.getVariants()
+                    .stream()
+                    .findFirst()
+                    .orElse(null);
+
+            price = variant.getPrice();
+
+            if (variant.getImages() != null && !variant.getImages().isEmpty()) {
+                imageUrl = variant.getImages()
+                        .stream()
+                        .findFirst()
+                        .map(ProductImage::getImageUrl)
+                        .orElse(null);
+            }
+        }
+
         return ProductSummaryResponse.builder()
                 .id(product.getId())
                 .productName(product.getProductName())
                 .categoryName(product.getCategory().getCategoryName())
                 .brandName(product.getBrand().getBrandName())
                 .sportName(product.getSport().getSportName())
+                .price(price)
+                .image_url(imageUrl)
                 .build();
     }
 

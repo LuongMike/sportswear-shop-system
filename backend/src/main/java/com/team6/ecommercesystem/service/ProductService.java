@@ -23,4 +23,10 @@ public interface ProductService {
     public void updateStock(Long variantId, Integer quantity);
     List<ProductSummaryResponse> getActiveProducts();
     Page<ProductSummaryResponse> getActiveProducts(int page, int size, String sortBy, String sortDir, Long categoryId, String keyword);
+    List<ProductSummaryResponse> filterProducts(
+            Long categoryId,
+            Long brandId,
+            Long sportId
+    );
+    List<BrandResponse> getAllBrand();
 }

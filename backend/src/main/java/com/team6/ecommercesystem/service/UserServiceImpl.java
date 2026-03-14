@@ -1,12 +1,7 @@
 package com.team6.ecommercesystem.service;
 
-import com.team6.ecommercesystem.dto.request.ProfileUpdateRequest;
-import com.team6.ecommercesystem.dto.request.RegisterRequest;
 import com.team6.ecommercesystem.dto.request.UserRequest;
-import com.team6.ecommercesystem.dto.request.UserUpdateRequest;
-import com.team6.ecommercesystem.dto.response.UserDetailResponse;
 import com.team6.ecommercesystem.dto.response.UserResponse;
-import com.team6.ecommercesystem.dto.response.UserSummaryResponse;
 import com.team6.ecommercesystem.model.Role;
 import com.team6.ecommercesystem.model.User;
 import com.team6.ecommercesystem.repository.RoleRepository;
@@ -166,4 +161,5 @@ public class UserServiceImpl implements UserService{
         return userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
     }
+
 }

@@ -60,7 +60,6 @@ public class CollectionServiceImpl implements CollectionService {
         return collections.map(CollectionMapper::toResponse);
     }
 
-
     @Override
     public CollectionResponse getCollectionBySlug(String slug) {
         Collection collection = collectionRepository.findBySlug(slug)

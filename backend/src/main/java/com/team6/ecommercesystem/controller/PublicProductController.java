@@ -37,4 +37,13 @@ public class PublicProductController {
     public ResponseEntity<ProductDetailResponse> getProductDetail(@PathVariable Long id) {
         return ResponseEntity.ok(productService.getProductDetail(id));
     }
+
+    @GetMapping("/brands")
+    @Operation(
+            summary = "Get brand",
+            description = "Lấy danh sách các nhãn hàng"
+    )
+    public ResponseEntity<List<BrandResponse>> getBrand(){
+        return ResponseEntity.ok(productService.getAllBrand());
+    }
 }

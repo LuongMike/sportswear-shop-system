@@ -18,5 +18,6 @@ public class UserSummaryResponse {
     private String phoneNumber;
     private String roleName;
     private Boolean status; // True: Active, False: Banned
+    private LocalDateTime lockTime;
     private LocalDateTime lastLoginDate;
 }

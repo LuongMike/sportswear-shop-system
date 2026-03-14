@@ -22,6 +22,18 @@ public class Category {
 
     private String description;
 
+    // ===== Self reference =====
+
+    // Nhiều category con -> 1 parent
+    @ManyToOne
+    @JoinColumn(name = "parent_id")
+    private Category parent;
+
+    // 1 parent -> nhiều category con
+    @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL)
+    private List<Category> children;
+
+    // ===== Quan hệ với Product =====
     @OneToMany(mappedBy = "category")
     private List<Product> products;
 }

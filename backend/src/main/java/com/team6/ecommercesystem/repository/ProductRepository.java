@@ -29,4 +29,18 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
             @Param("categoryId") Long categoryId,
             @Param("keyword") String keyword,
             Pageable pageable);
+
+    @Query("""
+    SELECT DISTINCT p FROM Product p
+    LEFT JOIN FETCH p.variants v
+    LEFT JOIN FETCH v.images i
+    WHERE (:categoryId IS NULL OR p.category.id = :categoryId)
+      AND (:brandId IS NULL OR p.brand.id = :brandId)
+      AND (:sportId IS NULL OR p.sport.id = :sportId)
+""")
+    List<Product> filterProducts(
+            Long categoryId,
+            Long brandId,
+            Long sportId
+    );
 }
