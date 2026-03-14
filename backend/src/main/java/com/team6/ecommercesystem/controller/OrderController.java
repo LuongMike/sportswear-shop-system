@@ -54,4 +54,13 @@ public class OrderController {
     public ResponseEntity<OrderResponse> userUpdateOrderStatus(@PathVariable Long id, @RequestParam OrderStatus status){
         return ResponseEntity.ok(orderService.userUpdateOrderStatus(id, status));
     }
+
+    @PatchMapping("/{id}/confirm-delivery")
+    @Operation(summary = "User xác nhận tình trạng nhận hàng",
+            description = "Khách hàng xác nhận đã nhận hàng (isReceived=true) hoặc chưa nhận hàng (isReceived=false)")
+    public ResponseEntity<OrderResponse> confirmDelivery(
+            @PathVariable Long id,
+            @RequestParam boolean isReceived) {
+        return ResponseEntity.ok(orderService.confirmDelivery(id, isReceived));
+    }
 }

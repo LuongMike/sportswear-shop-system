@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -28,24 +29,46 @@ public class ChatBotService {
     @Value("${gemini.api.url}")
     private String geminiUrl;
 
+    @Value("${app.frontend.url}")
+    private String frontendUrl;
+
+    @Transactional(readOnly = true)
     public ChatResponse generateResponse(String userMessage, List<String> history) {
         try {
             String productContext = productRepository.findAll().stream()
                     .limit(20)
-                    .map(p -> String.format("- %s: %s", p.getProductName(), p.getDescription()))
+                    .map(p -> {
+                        String price = p.getVariants()
+                                .stream()
+                                .findFirst()
+                                .map(v -> v.getPrice() + " VNĐ")
+                                .orElse("Đang Cập Nhật");
+                        String productLink = frontendUrl +"/product/" + p.getId();
+                        return String.format("Tên SP: %s\nMô tả: %s\nGiá tham khảo: %s\nLink mua hàng: %s\n",
+                                p.getProductName(), p.getDescription(), price, productLink);
+                    })
                     .collect(Collectors.joining("\n"));
 
             String historyContext = String.join("\n", history);
 
             String fullPrompt = String.format("""
-                Bạn là chuyên gia tư vấn của 'Sport Swear Shop'. 
-                Hãy dùng danh sách sản phẩm sau:
+                Bạn là chuyên gia tư vấn bán hàng nhiệt tình của 'Sport Swear Shop'. 
+                Dưới đây là danh sách sản phẩm hiện có tại cửa hàng cùng với thông tin chi tiết (Giá, Link):
                 %s
                 
                 Lịch sử trò chuyện gần đây:
                 %s
                 
-                Câu hỏi mới nhất: %s
+                Câu hỏi của khách hàng: %s
+                
+                YÊU CẦU QUAN TRỌNG:
+                1. Dựa vào danh sách trên để tư vấn sản phẩm phù hợp nhất.
+                2. Khi nhắc đến một sản phẩm, BẮT BUỘC phải cung cấp rõ các thông tin theo format sau:
+                   - **Tên sản phẩm**
+                   - 💰 Giá: [Giá tham khảo]
+                   - 📝 Mô tả ngắn gọn: [Nêu điểm nổi bật]
+                   - 🔗 [Xem chi tiết và đặt hàng tại đây](Link mua hàng)
+                3. Trả lời thân thiện, tự nhiên như một nhân viên sale thực thụ. Nếu khách hỏi sản phẩm không có trong danh sách, hãy xin lỗi và gợi ý sản phẩm khác.
                 """, productContext, historyContext, userMessage);
 
             String aiResult = callGeminiApi(fullPrompt);
