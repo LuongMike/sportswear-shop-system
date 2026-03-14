@@ -2,6 +2,7 @@ package com.team6.ecommercesystem.service;
 
 import com.team6.ecommercesystem.dto.request.ProductRequest;
 import com.team6.ecommercesystem.dto.request.VariantRequest;
+import com.team6.ecommercesystem.dto.response.BrandResponse;
 import com.team6.ecommercesystem.dto.response.ProductDetailResponse;
 import com.team6.ecommercesystem.dto.response.ProductSummaryResponse;
 import com.team6.ecommercesystem.dto.response.VariantResponse;
@@ -169,5 +170,15 @@ public class ProductServiceImpl implements ProductService{
 
         // 4. Map sang DTO (Đối tượng Page có sẵn hàm .map() cực kỳ tiện lợi, không cần dùng Stream)
         return productPage.map(ProductMapper::toSummaryDto);
+    }
+
+    @Override
+    public List<ProductSummaryResponse> filterProducts(Long categoryId, Long brandId, Long sportId) {
+        return List.of();
+    }
+
+    @Override
+    public List<BrandResponse> getAllBrand() {
+        return List.of();
     }
 }

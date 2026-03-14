@@ -2,6 +2,7 @@ package com.team6.ecommercesystem.service;
 
 import com.team6.ecommercesystem.dto.request.ProductRequest;
 import com.team6.ecommercesystem.dto.request.VariantRequest;
+import com.team6.ecommercesystem.dto.response.BrandResponse;
 import com.team6.ecommercesystem.dto.response.ProductDetailResponse;
 import com.team6.ecommercesystem.dto.response.ProductSummaryResponse;
 import com.team6.ecommercesystem.dto.response.VariantResponse;
