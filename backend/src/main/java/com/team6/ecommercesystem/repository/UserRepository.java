@@ -1,8 +1,6 @@
 package com.team6.ecommercesystem.repository;
 
 import com.team6.ecommercesystem.model.User;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -27,8 +25,4 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     // Đếm người dùng đăng ký mới
     @Query("SELECT COUNT(u) FROM User u WHERE u.createdAt >= :startDate AND u.createdAt <= :endDate")
     Long countNewUsers(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
-    @Query("SELECT u FROM User u WHERE " +
-            "(:keyword IS NULL OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-            "OR LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%')))")
-    Page<User> searchUsers(@Param("keyword") String keyword, Pageable pageable);
 }

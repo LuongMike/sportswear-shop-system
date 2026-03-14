@@ -1,6 +1,7 @@
 package com.team6.ecommercesystem.service;
 
 import com.team6.ecommercesystem.dto.request.ProfileUpdateRequest;
+import com.team6.ecommercesystem.dto.request.RegisterRequest;
 import com.team6.ecommercesystem.dto.request.UserRequest;
 import com.team6.ecommercesystem.dto.request.UserUpdateRequest;
 import com.team6.ecommercesystem.dto.response.UserDetailResponse;
@@ -14,10 +15,6 @@ import com.team6.ecommercesystem.repository.ValidRefreshTokenRepository;
 import com.team6.ecommercesystem.utils.UserMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -42,8 +39,8 @@ public class UserServiceImpl implements UserService{
     public UserResponse createUser(UserRequest request) {
         validateNewUser(request.getEmail(), request.getPhoneNumber(), request.getPassword(), request.getConfirmPassword());
 
-        Role role = roleRepository.findByRoleCode(request.getRoleCode())
-                .orElseThrow(() -> new IllegalArgumentException("Role not found: " + request.getRoleCode()));
+        Role role = roleRepository.findByRoleName(request.getRoleName())
+                .orElseThrow(() -> new IllegalArgumentException("Role not found: " + request.getRoleName()));
 
         User user = buildUser(request.getFullName(), request.getEmail(), request.getPhoneNumber(), request.getPassword(), role);
         return UserMapper.toUserResponse(userRepository.save(user));
@@ -51,15 +48,10 @@ public class UserServiceImpl implements UserService{
 
     @Override
     @Transactional(readOnly = true)
-    public Page<UserSummaryResponse> getAllUsers(int page, int size, String sortBy, String sortDir, String keyword) {
-        Sort sort = sortDir.equalsIgnoreCase(Sort.Direction.ASC.name())
-                ? Sort.by(sortBy).ascending()
-                : Sort.by(sortBy).descending();
-
-        Pageable pageable = PageRequest.of(page, size, sort);
-        Page<User> users = userRepository.searchUsers(keyword, pageable);
-
-        return users.map(UserMapper::toSummaryDto);
+    public List<UserSummaryResponse> getAllUsers() {
+        return userRepository.findAll().stream()
+                .map(UserMapper::toSummaryDto)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -77,9 +69,9 @@ public class UserServiceImpl implements UserService{
         if (request.getPhoneNumber() != null) user.setPhoneNumber(request.getPhoneNumber());
         if (request.getStatus() != null) user.setStatus(request.getStatus());
 
-        if (request.getRoleCode() != null) {
-            Role role = roleRepository.findByRoleCode(request.getRoleCode())
-                    .orElseThrow(() -> new IllegalArgumentException("Role not found: " + request.getRoleCode()));
+        if (request.getRoleName() != null) {
+            Role role = roleRepository.findByRoleName(request.getRoleName())
+                    .orElseThrow(() -> new IllegalArgumentException("Role not found: " + request.getRoleName()));
             user.setRole(role);
         }
 
@@ -165,5 +157,4 @@ public class UserServiceImpl implements UserService{
         return userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
     }
-
 }

@@ -8,10 +8,8 @@ import com.team6.ecommercesystem.dto.response.ProductSummaryResponse;
 import com.team6.ecommercesystem.dto.response.VariantResponse;
 import com.team6.ecommercesystem.service.AIProductService;
 import com.team6.ecommercesystem.service.ProductServiceImpl;
-import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -35,16 +33,8 @@ public class ProductController {
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Get All Products (Admin)", description = "Lấy danh sách tất cả sản phẩm kèm phân trang")
-    public ResponseEntity<Page<ProductSummaryResponse>> getAll(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "id") String sortBy,
-            @RequestParam(defaultValue = "desc") String sortDir,
-            @RequestParam(required = false) Long categoryId,
-            @RequestParam(required = false) String keyword
-    ) {
-        return ResponseEntity.ok(productService.getAllProducts(page, size, sortBy, sortDir, categoryId, keyword));
+    public ResponseEntity<List<ProductSummaryResponse>> getAll() {
+        return ResponseEntity.ok(productService.getAllProducts());
     }
 
     @GetMapping("/{id}")

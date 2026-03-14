@@ -11,6 +11,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -37,11 +38,11 @@ public class ChatBotService {
                     .limit(20)
                     .map(p -> {
                         String price = (p.getVariants() != null && !p.getVariants().isEmpty())
-                                ? p.getVariants().get(0).getPrice().toString() + "VNĐ"
-                                : "Đang Cập Nhật";
+                                ? new ArrayList<>(p.getVariants()).get(0).getPrice() + " VNĐ"
+                                : "Đang cập nhật";
                         String productLink = frontendUrl +"/product/" + p.getId();
                         return String.format("Tên SP: %s\n Mô tả: %s\n Gía tham khảo: %s\n Link mua hàng: %s\n",
-                        p.getProductName(), p.getDescription(), price, productLink);
+                                p.getProductName(), p.getDescription(), price, productLink);
                     })
                     .collect(Collectors.joining("\n"));
 

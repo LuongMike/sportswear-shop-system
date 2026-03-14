@@ -38,14 +38,6 @@ public class Product {
     @JoinColumn(name = "sport_id")
     private Sport sport; // Tương tự Category
 
-    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
-    private List<ProductVariant> variants;
-
-    @Column(name = "is_active")
-    @Builder.Default
-    private Boolean isActive = true;
-
-    @Column(name = "average_rating")
-    @Builder.Default
-    private Double averageRating = 0.0;
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<ProductVariant> variants = new HashSet<>();
 }

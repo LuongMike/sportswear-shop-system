@@ -208,7 +208,36 @@ const ChatBubble = () => {
                                 if (msg.content) {
                                   return (
                                     <p className="whitespace-pre-line">
-                                      {msg.content}
+                                      {msg.content
+                                        .split("\n")
+                                        .map((line, i) => {
+                                          const match =
+                                            line.match(/\[(.*?)\]\((.*?)\)/);
+
+                                          if (match) {
+                                            return (
+                                              <span key={i}>
+                                                🔗{" "}
+                                                <a
+                                                  href={match[2]}
+                                                  target="_blank"
+                                                  rel="noopener noreferrer"
+                                                  className="text-blue-600 underline font-medium"
+                                                >
+                                                  {match[1]}
+                                                </a>
+                                                <br />
+                                              </span>
+                                            );
+                                          }
+
+                                          return (
+                                            <span key={i}>
+                                              {line}
+                                              <br />
+                                            </span>
+                                          );
+                                        })}
                                     </p>
                                   );
                                 }

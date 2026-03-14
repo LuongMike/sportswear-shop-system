@@ -10,7 +10,6 @@ import com.team6.ecommercesystem.utils.OrderMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -138,17 +137,16 @@ public class OrderServiceImpl implements  OrderService {
         OrderStatus currentStatus = order.getStatus();
         PaymentMethod paymentMethod = order.getPaymentMethod();
 
-        // --- KIỂM TRA QUYỀN VÀ LUỒNG TRẠNG THÁI ---
         if (roleCode.equals("SHIPPER")){
             boolean isValidTransition = false;
 
-            // 1. Lấy hàng đi giao
-            if (newStatus == OrderStatus.SHIPPED) {
+            //1. Lấy hàng đi giao
+            if (newStatus == OrderStatus.SHIPPING) {
                 if (paymentMethod == PaymentMethod.COD && currentStatus == OrderStatus.PENDING) isValidTransition = true;
                 if (paymentMethod != PaymentMethod.COD && currentStatus == OrderStatus.PAID) isValidTransition = true;
             }
             // 2. Giao thành công hoặc thất bại
-            else if (currentStatus == OrderStatus.SHIPPED &&
+            else if (currentStatus == OrderStatus.SHIPPING &&
                     (newStatus == OrderStatus.DELIVERED || newStatus == OrderStatus.CANCELLED)) {
                 isValidTransition = true;
             }
@@ -158,17 +156,6 @@ public class OrderServiceImpl implements  OrderService {
             }
         } else if (!roleCode.equals("ADMIN")) {
             throw new RuntimeException("Bạn không có quyền cập nhật trạng thái đơn hàng");
-        }
-
-        // --- FIX LỖI 2: HOÀN LẠI KHO NẾU ĐƠN BỊ HỦY ---
-        // Nếu người dùng/admin/shipper chuyển trạng thái thành CANCELLED và đơn này trước đó chưa hủy
-        if (newStatus == OrderStatus.CANCELLED && currentStatus != OrderStatus.CANCELLED) {
-            order.getOrderItems().forEach(item -> {
-                ProductVariant variant = item.getVariant();
-                // Cộng lại số lượng lúc khách đặt trả về kho
-                variant.setStockQuantity(variant.getStockQuantity() + item.getQuantity());
-                variantRepository.save(variant);
-            });
         }
         // Cập nhật và lưu
         order.setStatus(newStatus);
@@ -192,37 +179,6 @@ public class OrderServiceImpl implements  OrderService {
             orderRepository.save(order);
         } else {
             throw new RuntimeException("Trạng thái cập nhật không hợp lệ (Chỉ được phép Hủy hoặc Xác nhận đã nhận hàng)");
-        }
-
-        return OrderMapper.toResponse(orderRepository.save(order));
-    }
-
-    @Override
-    public OrderResponse confirmDelivery(Long orderId, boolean isReceived) {
-        User currentUser = getCurrentUser();
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng"));
-
-        if (!order.getUser().getId().equals(currentUser.getId())) {
-            throw new RuntimeException("Bạn không có quyền thao tác trên đơn hàng này");
-        }
-
-        if (order.getStatus() != OrderStatus.SHIPPED && order.getStatus() != OrderStatus.DELIVERED) {
-            throw new RuntimeException("Chỉ có thể xác nhận khi đơn hàng đang giao hoặc đã giao xong");
-        }
-
-        if (isReceived) {
-            // Trường hợp 1: Khách báo ĐÃ NHẬN HÀNG -> Chuyển sang COMPLETED (Hoàn tất)
-            order.setStatus(OrderStatus.COMPLETED);
-        } else {
-            // Trường hợp 2: Khách báo CHƯA NHẬN HÀNG (Có thể Shipper bấm nhầm)
-            String currentNote = order.getNote() != null ? order.getNote() : "";
-            order.setNote(currentNote + "\n[CẢNH BÁO TỪ KHÁCH: Xác nhận CHƯA nhận được hàng vào lúc " + LocalDateTime.now() + "]");
-
-            // Nếu đơn đang là DELIVERED, trả lại về SHIPPED để xử lý tiếp
-            if (order.getStatus() == OrderStatus.DELIVERED) {
-                order.setStatus(OrderStatus.SHIPPED);
-            }
         }
 
         return OrderMapper.toResponse(orderRepository.save(order));

@@ -33,7 +33,7 @@ public class SecurityConfiguration {
             "/api/auth/register",
             "/api/auth/forgot-password",
             "/api/auth/reset-password",
-            "/api/payment/vnpay_return",
+            "/api/payment/**",
             "/api/collections/**",
             "/api/chat/**",
             "/api/products/**",
