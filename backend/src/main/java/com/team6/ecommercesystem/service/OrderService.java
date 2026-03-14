@@ -12,4 +12,5 @@ public interface OrderService {
     OrderResponse createOrder(OrderCreationRequest request);
     List<OrderResponse> getMyOrders();
     OrderResponse updateOrderStatus(Long orderId, OrderStatus newStatus);
+    OrderResponse confirmDelivery(Long orderId, boolean isReceived);
 }
