@@ -31,6 +31,6 @@ public interface ValidRefreshTokenRepository extends JpaRepository<ValidRefreshT
 
     @Modifying
     @Transactional
-    @Query("DELETE FROM ValidRefreshToken t WHERE t.expiryDate <= :now")
+    @Query("DELETE FROM ValidRefreshToken t WHERE t.expiredTime <= :now")
     int deleteExpiredTokens(@Param("now") LocalDateTime now);
 }

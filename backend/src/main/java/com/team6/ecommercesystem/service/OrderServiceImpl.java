@@ -166,4 +166,35 @@ public class OrderServiceImpl implements  OrderService {
         order.setStatus(newStatus);
         return OrderMapper.toResponse(orderRepository.save(order));
     }
+
+    @Override
+    public OrderResponse confirmDelivery(Long orderId, boolean isReceived) {
+        User currentUser = getCurrentUser();
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng"));
+
+        if (!order.getUser().getId().equals(currentUser.getId())) {
+            throw new RuntimeException("Bạn không có quyền thao tác trên đơn hàng này");
+        }
+
+        if (order.getStatus() != OrderStatus.SHIPPED && order.getStatus() != OrderStatus.DELIVERED) {
+            throw new RuntimeException("Chỉ có thể xác nhận khi đơn hàng đang giao hoặc đã giao xong");
+        }
+
+        if (isReceived) {
+            // Trường hợp 1: Khách báo ĐÃ NHẬN HÀNG -> Chuyển sang COMPLETED (Hoàn tất)
+            order.setStatus(OrderStatus.COMPLETED);
+        } else {
+            // Trường hợp 2: Khách báo CHƯA NHẬN HÀNG (Có thể Shipper bấm nhầm)
+            String currentNote = order.getNote() != null ? order.getNote() : "";
+            order.setNote(currentNote + "\n[CẢNH BÁO TỪ KHÁCH: Xác nhận CHƯA nhận được hàng vào lúc " + LocalDateTime.now() + "]");
+
+            // Nếu đơn đang là DELIVERED, trả lại về SHIPPED để xử lý tiếp
+            if (order.getStatus() == OrderStatus.DELIVERED) {
+                order.setStatus(OrderStatus.SHIPPED);
+            }
+        }
+
+        return OrderMapper.toResponse(orderRepository.save(order));
+    }
 }

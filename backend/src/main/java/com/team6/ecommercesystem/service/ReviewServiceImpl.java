@@ -6,6 +6,7 @@ import com.team6.ecommercesystem.model.Product;
 import com.team6.ecommercesystem.model.ProductReview;
 import com.team6.ecommercesystem.model.User;
 import com.team6.ecommercesystem.model.OrderItem;
+import com.team6.ecommercesystem.repository.OrderItemRepository;
 import com.team6.ecommercesystem.repository.ProductReviewRepository;
 import com.team6.ecommercesystem.repository.ProductRepository;
 import com.team6.ecommercesystem.repository.OrderRepository;
@@ -26,7 +27,7 @@ public class ReviewServiceImpl implements ReviewService {
     private ProductRepository productRepository;
 
     @Autowired
-    private OrderRepository orderItemRepository;
+    private OrderItemRepository orderItemRepository;
 
     @Override
     @Transactional
@@ -52,7 +53,7 @@ public class ReviewServiceImpl implements ReviewService {
         ProductReview review = new ProductReview();
         review.setProduct(product);
         review.setUser(currentUser);
-        review.setOrder(orderItem);
+        review.setOrderItem(orderItem);
         review.setRating(request.getRating());
         review.setComment(request.getComment());
 
