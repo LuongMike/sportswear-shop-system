@@ -72,13 +72,8 @@ export function OrderManager() {
 
   // Tính toán các trạng thái mà user hiện tại được phép chọn cho một đơn hàng
   function getSelectableStatuses(order: Order): string[] {
-    // Quản trị viên: toàn quyền
-    if (isAdmin) {
-      return ORDER_STATUSES;
-    }
-
     // Những role khác (không phải shipper) không được phép đổi trạng thái
-    if (!isShipper) {
+    if (!isShipper && !isAdmin) {
       return [order.status];
     }
 
@@ -183,7 +178,10 @@ export function OrderManager() {
                 <td className="p-2">{order.paymentMethod}</td>
                 <td className="p-2">
                   {(() => {
-                    if (order.status === "CANCELLED" || order.status === "COMPLETED") {
+                    if (
+                      order.status === "CANCELLED" ||
+                      order.status === "COMPLETED"
+                    ) {
                       return (
                         <span className="text-xs text-gray-400 italic">
                           Không thể cập nhật
@@ -212,9 +210,7 @@ export function OrderManager() {
                               selectedStatus !== order.status
                             ) {
                               // Bảo vệ: chỉ cho phép trạng thái hợp lệ
-                              if (
-                                selectableStatuses.includes(selectedStatus)
-                              ) {
+                              if (selectableStatuses.includes(selectedStatus)) {
                                 updateStatusMutation.mutate({
                                   id: order.id,
                                   status: selectedStatus,
@@ -240,9 +236,7 @@ export function OrderManager() {
                           <Button
                             type="submit"
                             className="px-2 py-1 rounded bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700"
-                            disabled={
-                              updateStatusMutation.status === "pending"
-                            }
+                            disabled={updateStatusMutation.status === "pending"}
                           >
                             Lưu
                           </Button>

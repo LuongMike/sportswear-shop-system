@@ -13,13 +13,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 const OrdersPage = () => {
   const navigate = useNavigate();
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["my-orders"],
     queryFn: () => OrderAPI.getOrders(),
     retry: 1,
@@ -34,6 +35,60 @@ const OrdersPage = () => {
     : Array.isArray(data)
       ? data
       : [];
+
+  // Tự động hủy đơn nếu quá 7 ngày mà chưa được xác thực
+  useEffect(() => {
+    if (!orders || orders.length === 0) return;
+
+    const now = Date.now();
+    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+
+    const toCancel = (orders as any[]).filter((order) => {
+      const createdAt = new Date(order.orderDate).getTime();
+      if (Number.isNaN(createdAt)) return false;
+      const isOlderThan7Days = now - createdAt > sevenDaysMs;
+      const status = order.status;
+      return (
+        isOlderThan7Days && status !== "CANCELLED" && status !== "COMPLETED"
+      );
+    });
+
+    if (toCancel.length === 0) return;
+
+    (async () => {
+      try {
+        await Promise.all(
+          toCancel.map((order) =>
+            OrderAPI.userUpdateOrderStatus(
+              order.id ?? order.orderId,
+              "CANCELLED",
+            ),
+          ),
+        );
+        await refetch();
+      } catch (error) {
+        console.error("Auto-cancel orders error:", error);
+      }
+    })();
+  }, [orders, refetch]);
+
+  const handleUserUpdateStatus = async (
+    orderId: number,
+    status: "COMPLETED" | "CANCELLED",
+  ) => {
+    try {
+      await OrderAPI.userUpdateOrderStatus(orderId, status);
+      toast.success(
+        status === "COMPLETED"
+          ? "Xác nhận đã nhận hàng thành công"
+          : "Cập nhật đơn hàng chưa nhận hàng thành công",
+      );
+      await refetch();
+    } catch (error) {
+      console.error("Update order status error:", error);
+      toast.error("Cập nhật trạng thái đơn hàng thất bại");
+    }
+  };
 
   if (isLoading) {
     return (
@@ -81,11 +136,16 @@ const OrdersPage = () => {
         </div>
 
         <div className="space-y-4">
-          {orders.map((order) => (
-            <div key={order.id} className="bg-white border rounded-lg">
+          {orders.map((order: any) => (
+            <div
+              key={order.id ?? order.orderId}
+              className="bg-white border rounded-lg"
+            >
               <div className="p-4 border-b flex justify-between bg-gray-50">
                 <div>
-                  <p className="font-medium">Đơn hàng #{order.id}</p>
+                  <p className="font-medium">
+                    Đơn hàng #{order.id ?? order.orderId}
+                  </p>
                   <p className="text-sm text-gray-500">
                     {new Date(order.orderDate).toLocaleString("vi-VN")}
                   </p>
@@ -113,12 +173,46 @@ const OrdersPage = () => {
                     </p>
                   </div>
                 ))}
-                <Button
-                  variant="outline"
-                  onClick={() => setSelectedOrder(order)}
-                >
-                  Xem thông tin đầy đủ
-                </Button>
+                <div className="flex flex-col sm:flex-row gap-2 mt-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setSelectedOrder(order)}
+                  >
+                    Xem thông tin đầy đủ
+                  </Button>
+                </div>
+                {order.status == "DELIVERED" && (
+                  <div className="flex flex-col sm:flex-row gap-2 mt-2">
+                    {order.status !== "CANCELLED" &&
+                      order.status !== "COMPLETED" && (
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() =>
+                              handleUserUpdateStatus(
+                                order.id ?? order.orderId,
+                                "COMPLETED",
+                              )
+                            }
+                          >
+                            Đã nhận hàng
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() =>
+                              handleUserUpdateStatus(
+                                order.id ?? order.orderId,
+                                "CANCELLED",
+                              )
+                            }
+                          >
+                            Chưa nhận hàng
+                          </Button>
+                        </div>
+                      )}
+                  </div>
+                )}
               </div>
             </div>
           ))}

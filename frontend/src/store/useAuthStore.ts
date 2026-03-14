@@ -91,7 +91,51 @@ export const useAuthStore = create<AuthState>()(
           throw error;
         }
       },
+      requestPasswordReset: async (email: string) => {
+        set({ loading: true });
+        try {
+          const res = await api.post("/api/auth/forgot-password", {
+            email,
+          });
+          toast.success("Yêu cầu đặt lại mật khẩu đã được gửi!");
+          return res.data;
+        } catch (error) {
+          toast.error(
+            error.response?.data?.message || "Đặt lại mật khẩu thất bại",
+          );
+          throw error;
+        } finally {
+          set({ loading: false });
+        }
+      },
+      resetPassword: async (
+        token: string,
+        newPassword: string,
+        confirmPassword: string,
+      ) => {
+        set({ loading: true });
+        try {
+          console.log(newPassword, confirmPassword);
 
+          const res = await api.post("/api/auth/reset-password", {
+            token,
+            newPassword,
+            confirmPassword,
+          });
+          console.log("Đặt lại mật khẩu thành công:", res);
+          toast.success("Đặt lại mật khẩu thành công!");
+          if (res.status === 200) {
+            window.location.href = "/login";
+          }
+        } catch (error) {
+          toast.error(
+            error.response?.data?.message || "Đặt lại mật khẩu thất bại",
+          );
+          throw error;
+        } finally {
+          set({ loading: false });
+        }
+      },
       clearState: () =>
         set({
           accessToken: null,
@@ -110,6 +154,8 @@ export const useAuthStore = create<AuthState>()(
       }): Promise<RegisterResponse> => {
         set({ loading: true });
         try {
+          console.log(data);
+
           const res = await api.post("/api/auth/register", data);
           toast.success("Đăng ký thành công! Vui lòng đăng nhập.");
           return res.data;
@@ -136,6 +182,10 @@ export const useAuthStore = create<AuthState>()(
         // Reload lại toàn bộ trang sau khi đăng xuất
         if (typeof window !== "undefined") {
           window.location.reload();
+        }
+
+        if (typeof window !== "undefined") {
+          window.location.href = "/login";
         }
       },
       getCurrentUser: async () => {

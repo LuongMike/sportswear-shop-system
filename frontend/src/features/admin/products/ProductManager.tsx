@@ -77,13 +77,15 @@ export function ProductManager() {
     queryFn: brandApi.getAll,
   });
   const brandOptions = brandsRes?.brands ?? [];
+  console.log(brandOptions);
+  console.log(brandsRes);
 
   // Fetch sports
   const { data: sportsRes } = useQuery({
     queryKey: ["sports"],
     queryFn: sportApi.getAll,
   });
-  const sportOptions = sportsRes  ?? [];
+  const sportOptions = sportsRes ?? [];
 
   // Form
   const {
@@ -142,17 +144,13 @@ export function ProductManager() {
   const handleEdit = async (product: AdminProductSummary) => {
     setIsDetailLoading(true);
     try {
-      const detail = (await adminProductsApi.getDetail(
-        product.id,
-      )) as any;
+      const detail = (await adminProductsApi.getDetail(product.id)) as any;
       setEditingProduct(detail);
 
       const categoryName =
         detail.categoryName ?? detail.categories?.[0]?.name ?? "";
-      const brandName =
-        detail.brandName ?? detail.brand?.name ?? "";
-      const sportName =
-        detail.sportName ?? detail.sports?.[0]?.name ?? "";
+      const brandName = detail.brandName ?? detail.brand?.name ?? "";
+      const sportName = detail.sportName ?? detail.sports?.[0]?.name ?? "";
 
       reset({
         productName: detail.productName,
@@ -160,25 +158,23 @@ export function ProductManager() {
         categoryName,
         brandName,
         sportName,
-        variants:
-          detail.variants?.map((v: AdminVariantRequest) => ({
-            size: v.size,
-            color: v.color,
-            price: v.price,
-            stockQuantity: v.stockQuantity,
-            sku: v.sku,
-            imageUrls:
-              v.imageUrls && v.imageUrls.length > 0 ? v.imageUrls : [""],
-          })) ?? [
-            {
-              size: "",
-              color: "",
-              price: 0,
-              stockQuantity: 0,
-              sku: "",
-              imageUrls: [""],
-            },
-          ],
+        variants: detail.variants?.map((v: AdminVariantRequest) => ({
+          size: v.size,
+          color: v.color,
+          price: v.price,
+          stockQuantity: v.stockQuantity,
+          sku: v.sku,
+          imageUrls: v.imageUrls && v.imageUrls.length > 0 ? v.imageUrls : [""],
+        })) ?? [
+          {
+            size: "",
+            color: "",
+            price: 0,
+            stockQuantity: 0,
+            sku: "",
+            imageUrls: [""],
+          },
+        ],
       });
       setIsDialogOpen(true);
     } catch (e) {
@@ -261,7 +257,9 @@ export function ProductManager() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Quản lý Sản phẩm</h2>
+          <h2 className="text-2xl font-bold tracking-tight">
+            Quản lý Sản phẩm
+          </h2>
           <p className="text-sm text-muted-foreground mt-1">
             Danh sách sản phẩm và các biến thể đang bán trên cửa hàng.
           </p>
@@ -303,7 +301,10 @@ export function ProductManager() {
             <tbody className="[&_tr:last-child]:border-0">
               {pagedProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="h-24 text-center text-muted-foreground">
+                  <td
+                    colSpan={6}
+                    className="h-24 text-center text-muted-foreground"
+                  >
                     Không có sản phẩm.
                   </td>
                 </tr>
@@ -594,11 +595,11 @@ export function ProductManager() {
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs">Ảnh (URL, phân tách bằng dấu phẩy)</Label>
+                      <Label className="text-xs">
+                        Ảnh (URL, phân tách bằng dấu phẩy)
+                      </Label>
                       <Input
-                        {...register(
-                          `variants.${index}.imageUrls.0` as const,
-                        )}
+                        {...register(`variants.${index}.imageUrls.0` as const)}
                         placeholder="https://...,https://..."
                       />
                     </div>

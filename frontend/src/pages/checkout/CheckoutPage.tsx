@@ -40,7 +40,7 @@ const CheckoutPage = () => {
   const [note, setNote] = useState("");
   const [isAddressDialogOpen, setIsAddressDialogOpen] = useState(false);
   const [addressForm, setAddressForm] = useState(initialAddressForm);
-  const [paymentMethod, setPaymentMethod] = useState<"cod" | "VNPAY">("cod");
+  const [paymentMethod, setPaymentMethod] = useState<"COD" | "VNPAY">("COD");
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(
     null,
   );
@@ -65,9 +65,7 @@ const CheckoutPage = () => {
     );
   }, [addresses]);
 
-  const handleAddressInputChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
-  ) => {
+  const handleAddressInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setAddressForm((prev) => ({ ...prev, [name]: value }));
   };
@@ -140,7 +138,7 @@ const CheckoutPage = () => {
       // ✅ LƯU LOCALSTORAGE
       saveLatestOrder(orderForStorage as any);
 
-      if (paymentMethod === "cod") {
+      if (paymentMethod === "COD") {
         toast.success("Đặt hàng thành công!");
         fetchCart();
         navigate("/account/orders");
@@ -201,7 +199,7 @@ const CheckoutPage = () => {
 
       saveLatestOrder(fakeOrder as any);
 
-      if (paymentMethod === "cod") {
+      if (paymentMethod === "COD") {
         navigate("/account/orders");
         return;
       }
@@ -224,13 +222,13 @@ const CheckoutPage = () => {
       // Gọi API tạo đơn hàng
       const orderRes = await OrderAPI.createOrder({
         addressId: selectedAddressId,
-        paymentMethod: paymentMethod === "cod" ? "cod" : "VNPAY",
+        paymentMethod: paymentMethod === "COD" ? "COD" : "VNPAY",
         note,
       });
       const orderId =
         orderRes?.data?.orderId ?? orderRes?.orderId ?? orderRes?.id;
 
-      if (paymentMethod === "cod") {
+      if (paymentMethod === "COD") {
         toast.success("Đặt hàng thành công!");
         fetchCart();
         navigate("/account/orders");
@@ -481,10 +479,7 @@ const CheckoutPage = () => {
                     <div key={itemId} className="flex gap-3 text-sm">
                       <div className="w-16 h-16 shrink-0 rounded-md overflow-hidden border">
                         <img
-                          src={
-                            item.imageUrl 
-                            || ""
-                          }
+                          src={item.imageUrl || ""}
                           alt={item.product?.name ?? item.productName}
                           className="w-full h-full object-cover"
                         />
@@ -494,8 +489,7 @@ const CheckoutPage = () => {
                           {item.product?.name ?? item.productName}
                         </p>
                         <p className="text-gray-500 text-xs">
-                          {item.color ?? "N/A"} /{" "}
-                          {item.size ?? "N/A"}
+                          {item.color ?? "N/A"} / {item.size ?? "N/A"}
                         </p>
                         <div className="flex justify-between mt-1">
                           <span className="text-gray-500">
@@ -545,12 +539,12 @@ const CheckoutPage = () => {
                   <RadioGroup
                     value={paymentMethod}
                     onValueChange={(val) =>
-                      setPaymentMethod(val as "cod" | "VNPAY")
+                      setPaymentMethod(val as "COD" | "VNPAY")
                     }
                     className="space-y-3"
                   >
                     <div className="flex items-center space-x-2 border p-3 rounded-md cursor-pointer">
-                      <RadioGroupItem value="cod" id="pay-cod" />
+                      <RadioGroupItem value="COD" id="pay-cod" />
                       <Label
                         htmlFor="pay-cod"
                         className="cursor-pointer flex-1"

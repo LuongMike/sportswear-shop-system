@@ -38,6 +38,6 @@ public class Product {
     @JoinColumn(name = "sport_id")
     private Sport sport; // Tương tự Category
 
-    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<ProductVariant> variants = new HashSet<>();
 }

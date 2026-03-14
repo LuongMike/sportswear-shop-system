@@ -161,4 +161,26 @@ public class OrderServiceImpl implements  OrderService {
         order.setStatus(newStatus);
         return OrderMapper.toResponse(orderRepository.save(order));
     }
+
+    @Override
+    public OrderResponse userUpdateOrderStatus(Long orderId, OrderStatus status) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng"));
+
+        User currentUser = getCurrentUser();
+        OrderStatus currentStatus = order.getStatus();
+
+        if (currentStatus != OrderStatus.DELIVERED) {
+            throw new RuntimeException("Trạng thái đơn hàng hiện tại không cho phép cập nhật.");
+        }
+
+        if (status == OrderStatus.CANCELLED || status == OrderStatus.COMPLETED) {
+            order.setStatus(status);
+            orderRepository.save(order);
+        } else {
+            throw new RuntimeException("Trạng thái cập nhật không hợp lệ (Chỉ được phép Hủy hoặc Xác nhận đã nhận hàng)");
+        }
+
+        return OrderMapper.toResponse(orderRepository.save(order));
+    }
 }

@@ -48,4 +48,10 @@ public class OrderController {
     public ResponseEntity<List<OrderResponse>> getAllOrders() {
         return ResponseEntity.ok(orderService.getAllOrders());
     }
+
+    @PatchMapping("/{id}/orderStatus")
+    @Operation(summary = "Update my status order")
+    public ResponseEntity<OrderResponse> userUpdateOrderStatus(@PathVariable Long id, @RequestParam OrderStatus status){
+        return ResponseEntity.ok(orderService.userUpdateOrderStatus(id, status));
+    }
 }

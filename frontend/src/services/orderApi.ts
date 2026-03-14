@@ -97,4 +97,18 @@ export const OrderAPI = {
     );
     return response.data;
   },
+
+  userUpdateOrderStatus: async (orderId: number, status: string) => {
+    const bearToken = getAccessToken();
+    const response = await api.patch(
+      `/api/orders/${orderId}/orderStatus?status=${encodeURIComponent(status)}`,
+      undefined,
+      {
+        headers: {
+          Authorization: `Bearer ${bearToken}`,
+        },
+      },
+    );
+    return response.data;
+  },
 };

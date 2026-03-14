@@ -1,6 +1,6 @@
 // useCustomerChat.ts
 import { useState, useEffect, useRef } from "react";
-import { chatRoomApi, chatApi } from "@/services/chat.service";
+import { chatRoomApi, chatApi, chatApiAi } from "@/services/chat.service";
 import type { ChatMessage } from "@/services/chat.service";
 import ws from "@/services/ws.service";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -63,62 +63,60 @@ export function useCustomerChat() {
   }, [user, accessToken]);
 
   const handleSend = async () => {
-    if (!input.trim() || !roomId) return;
-    const content = input.trim();
+    if (!input.trim()) return;
+
+    const userMessage = input;
     setInput("");
 
-    if (mode === "ai") {
-      // Chế độ AI: Tự tạo tin nhắn local để phản hồi tức thì
-      const userMsg: ChatMessage = {
-        id: Date.now(),
-        content,
-        sender: "CUSTOMER",
-        sentAt: new Date().toISOString(),
-        type: "TEXT",
-      };
-      setMessages((prev) => [...prev, userMsg]);
-      setIsAiThinking(true);
+    try {
+      // Nếu đang ở chế độ AI
+      if (mode === "ai") {
+        setIsAiThinking(true);
+        console.log(userMessage);
 
-      try {
-        const res = await ProductsAPI.getProducts({ search: content }, 1, 3);
-        const aiText = res.data?.length
-          ? `Gợi ý cho bạn: ${res.data.map((p) => p.name).join(", ")}`
-          : "Mình không tìm thấy sản phẩm phù hợp.";
+        const res = await chatApiAi.send({
+          message: userMessage,
+        });
+
+        console.log(res);
+
+        const aiReply = res.data?.response || "AI không trả lời.";
 
         setMessages((prev) => [
           ...prev,
           {
+            id: Date.now(),
+            content: userMessage,
+            sender: "CUSTOMER",
+            sentAt: new Date().toISOString(),
+            type: "TEXT",
+          },
+          {
             id: Date.now() + 1,
-            content: aiText,
+            content: aiReply,
             sender: "ADMIN",
             sentAt: new Date().toISOString(),
             type: "TEXT",
           },
         ]);
-      } finally {
-        setIsAiThinking(false);
       }
-    } else {
-      // Chế độ Nhân viên: Gửi qua API
-      // Thêm tin nhắn vào local state ngay lập tức (optimistic update)
-      const userMsg: ChatMessage = {
-        id: Date.now(),
-        content,
-        sender: "CUSTOMER",
-        sentAt: new Date().toISOString(),
-        type: "TEXT",
-      };
-      setMessages((prev) => [...prev, userMsg]);
 
-      try {
-        await chatApi.sendMessage(roomId, {
-          content,
+      // Nếu chat với nhân viên
+      else {
+        if (!roomId) return;
+
+        const res = await chatApi.sendMessage(roomId, {
+          content: userMessage,
           sender: "CUSTOMER",
           type: "TEXT",
         });
-      } catch (err) {
-        console.error("Lỗi gửi tin nhắn:", err);
+
+        setMessages((prev) => [...prev, res.data]);
       }
+    } catch (err) {
+      console.error("Send message error:", err);
+    } finally {
+      setIsAiThinking(false);
     }
   };
   // 2. Kết nối WebSocket

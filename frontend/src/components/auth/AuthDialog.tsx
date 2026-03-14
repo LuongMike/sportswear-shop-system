@@ -47,7 +47,16 @@ const AuthDialog = () => {
               <DropdownMenuLabel>Tài khoản của tôi</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                onClick={() => navigate("/account/profile")}
+                onClick={() => {
+                  if (
+                    user?.roleName === "Quản Trị Viên" ||
+                    user?.roleName === "Người giao hàng"
+                  ) {
+                    navigate("/admin");
+                  } else {
+                    navigate("/account/profile");
+                  }
+                }}
                 className="cursor-pointer"
               >
                 <UserCircle className="mr-2 h-4 w-4" />

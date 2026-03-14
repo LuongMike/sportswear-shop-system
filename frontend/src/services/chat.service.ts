@@ -18,6 +18,11 @@ export interface ChatMessage {
   fileUrl?: string;
 }
 
+export interface ChatMessageAI {
+  message: string;
+  history?: [];
+}
+
 export const chatRoomApi = {
   createRoom: (data: {
     customerName: string;
@@ -39,4 +44,8 @@ export const chatApi = {
   // Sửa: Trả về đối tượng tin nhắn đơn lẻ thay vì mảng
   sendMessage: (roomId: number, data: SendMessageDTO) =>
     api.post<ChatMessage>(`/api/chat/rooms/${roomId}/messages`, data),
+};
+
+export const chatApiAi = {
+  send: (data: ChatMessageAI) => api.post(`/api/chat/send`, data),
 };

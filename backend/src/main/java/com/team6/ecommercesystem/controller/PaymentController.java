@@ -54,15 +54,17 @@ public class PaymentController {
                     order.setStatus(OrderStatus.PAID);
                     orderRepository.save(order);
 
+                    System.out.println(frontendUrl);
+
                     // Redirect về trang Frontend "Thành công"
-                    response.sendRedirect(frontendUrl +"/payment-success?orderId=" + orderId);
+                    response.sendRedirect(frontendUrl +"/account/orders");
                 } else {
                     // Thanh toán thất bại
                     order.setStatus(OrderStatus.CANCELLED); // Hoặc giữ Pending tùy logic
                     orderRepository.save(order);
 
                     // Redirect về trang Frontend "Thất bại"
-                    response.sendRedirect(frontendUrl+"/payment-failed?orderId=" + orderId);
+                    response.sendRedirect(frontendUrl+ "/account/orders");
                 }
             }
         }

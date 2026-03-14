@@ -44,8 +44,12 @@ const ResetPasswordPage = () => {
       return;
     }
     try {
-      const result = await resetPassword(token, data.newPassword);
-      if (result.success) {
+      const result = await resetPassword(
+        token,
+        data.newPassword,
+        data.confirmPassword,
+      );
+      if (result?.success === true) {
         navigate("/login", { replace: true });
       }
     } catch {
