@@ -13,7 +13,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findByUserIdOrderByOrderDateDesc(Long userId);
 
     // Tính tổng doanh thu (chỉ tính đơn COMPLETED)
-    @Query("SELECT SUM(o.totalAmount) FROM Order o WHERE o.status = 'COMPLETED' AND o.orderDate >= :startDate AND o.orderDate <= :endDate")
+    @Query("SELECT SUM(o.totalAmount) FROM Order o WHERE o.status = 'PAID' AND o.orderDate BETWEEN :startDate AND :endDate")
     BigDecimal sumRevenueByDateRange(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
 
     // Đếm tổng số đơn hàng
